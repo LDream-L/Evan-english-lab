@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+  <head>
+    <base target="_top">
+    <?!= include('Stylesheet'); ?>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">Vocabulary V1</p>
+        <h1 id="app-name">Evan TOEIC Lab</h1>
+      </header>
+      <section class="card" aria-live="polite">
+        <h2>系統狀態</h2>
+        <p id="status">正在連接資料庫…</p>
+        <dl class="metrics">
+          <div><dt>預計時間</dt><dd id="minutes">—</dd></div>
+          <div><dt>到期複習</dt><dd id="due">—</dd></div>
+          <div><dt>逾期複習</dt><dd id="overdue">—</dd></div>
+          <div><dt>今日新字</dt><dd id="new-words">—</dd></div>
+        </dl>
+        <button type="button" disabled>開始今日學習（M2 開放）</button>
+      </section>
+    </main>
+    <?!= include('JavaScript'); ?>
+  </body>
+</html>
+

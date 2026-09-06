@@ -1,0 +1,30 @@
+<script>
+  /**
+   * 載入首頁啟動資料。
+   * 時間複雜度：O(1)（M0 固定欄位）。
+   * 空間複雜度：O(1)。
+   * 更快替代：靜態渲染可避免 RPC，但無法呈現即時資料；正式版採單次批次 bootstrap，避免多個短 RPC。
+   */
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(renderDashboard)
+      .withFailureHandler(renderError)
+      .getBootstrapData();
+  }
+
+  function renderDashboard(data) {
+    document.getElementById('app-name').textContent = data.appName;
+    document.getElementById('status').textContent = data.health.ok ? 'M0 資料結構正常' : '資料結構異常：' + data.health.problems.join(', ');
+    document.getElementById('minutes').textContent = data.dashboard.plannedMinutes + ' 分鐘';
+    document.getElementById('due').textContent = data.dashboard.due;
+    document.getElementById('overdue').textContent = data.dashboard.overdue;
+    document.getElementById('new-words').textContent = data.dashboard.newWords;
+  }
+
+  function renderError(error) {
+    document.getElementById('status').textContent = '連線失敗：' + (error && error.message ? error.message : String(error));
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+

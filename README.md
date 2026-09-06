@@ -5,9 +5,11 @@
 ## 目前狀態
 
 - 版本：`v0.1.1-m0`
-- 階段：M0 專案骨架與資料結構
-- 已完成：Apps Script 可部署骨架、Schema 建立器、文章擷取／自動補全資料管線規格、完整專案藍圖
-- 尚未完成：Google Sheet 實體建立、Apps Script 綁定、GitHub 遠端儲存庫建立與部署
+- 階段：M0 已完成，準備進入 M1 單字資料庫
+- 已完成：GitHub `main`、13 張 Google Sheets 資料表、Apps Script 綁定、私人 Web App 部署、`setupProject()` 與 `healthCheck()` 線上驗收
+- 正式網站（僅擁有者可存取）：[Evan TOEIC Lab](https://script.google.com/macros/s/AKfycbzKWKoCo21QYwLcOrMukU_n5dOnLH2h0Uy-PzuDb7UdyFi8hxJOt19ky213gKjpJIrR/exec)
+- 正式資料庫：[Evan English Lab｜正式資料庫](https://docs.google.com/spreadsheets/d/1vq-icv9yjwoDtW2J7PQ1vb8eTkCtCWx-fgMVZAtB0jk/edit)
+- Apps Script 專案 ID：`15CHDnUxAayKexW04MLANAj1jyuZp3yOYn6clL0bhpp8CkkL1Vt7GDB3n`
 
 ## 目錄
 
@@ -21,14 +23,13 @@ evan-toeic-lab/
 └─ README.md
 ```
 
-## M0 啟動順序
+## M0 線上環境
 
-1. 建立空白 Google Sheet。
-2. 建立 standalone Apps Script 專案。
-3. 複製 `.clasp.json.example` 為 `.clasp.json`，填入 `scriptId`。
-4. 在 Apps Script 的 Script Properties 設定 `SPREADSHEET_ID`。
-5. 推送 `appsscript/` 後執行一次 `setupProject()`。
-6. 執行 `healthCheck()`，確認所有工作表與 schema 版本。
-7. 部署為 Web App；個人版預設「以擁有者身分執行」，存取權限僅限 Evan 的 Google 帳號。
+1. Google Sheet 已建立並通過 13/13 schema 驗證。
+2. Standalone Apps Script 已綁定正式 `SPREADSHEET_ID`。
+3. Apps Script 使用 `Asia/Taipei`、V8 runtime。
+4. `setupProject()` 與 `healthCheck()` 已於線上環境執行完成。
+5. Web App 第 2 版已部署；以擁有者身分執行，存取權限僅限 Evan 的 Google 帳號。
+6. 網站實測顯示「M0 資料結構正常」。
 
 詳細決策與驗收條件見 [docs/master-plan.md](docs/master-plan.md)。

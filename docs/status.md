@@ -25,6 +25,7 @@
 - 新增 M1A 文章候選介面與補全佇列狀態；所有文章內容均用 DOM `textContent` 渲染。
 - schema v4 migration 只在 `enrichment_jobs` 尾端新增 4 欄，不移動既有資料。
 - M1A 本地測試加入網址安全、HTML 清理、候選排序、已收錄／已掌握排除與 UI 安全檢查。
+- 新增 GitHub Actions：每次 `main` push 或 pull request 自動執行 Node 測試與所有 `.gs` 語法檢查；workflow 只有 repository contents 唯讀權限。
 
 - 實作單字新增、讀取、更新、封存與復原，更新使用 `row_version` 防止舊頁面覆蓋。
 - 實作來源新增、更新與封存；單字保存不可變 `source_id` 關聯。

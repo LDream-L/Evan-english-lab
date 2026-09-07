@@ -1,0 +1,33 @@
+name: Test Evan English Lab
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run unit tests
+        run: node --test tests/*.test.js
+
+      - name: Check Apps Script syntax
+        shell: bash
+        run: |
+          for file in appsscript/*.gs; do
+            node --check < "$file"
+          done

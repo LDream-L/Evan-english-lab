@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-- 版本：`v0.1.1-m0`
-- 階段：M0 已完成，準備進入 M1 單字資料庫
-- 已完成：GitHub `main`、13 張 Google Sheets 資料表、Apps Script 綁定、私人 Web App 部署、`setupProject()` 與 `healthCheck()` 線上驗收
+- 版本：`v0.2.0-m1`
+- 階段：M1 單字資料庫
+- 已完成：M0 線上環境；M1 單字 CRUD、來源管理、搜尋、匯入預覽、分批續傳與 schema v3
 - 正式網站（僅擁有者可存取）：[Evan TOEIC Lab](https://script.google.com/macros/s/AKfycbzKWKoCo21QYwLcOrMukU_n5dOnLH2h0Uy-PzuDb7UdyFi8hxJOt19ky213gKjpJIrR/exec)
 - 正式資料庫：[Evan English Lab｜正式資料庫](https://docs.google.com/spreadsheets/d/1vq-icv9yjwoDtW2J7PQ1vb8eTkCtCWx-fgMVZAtB0jk/edit)
 - Apps Script 專案 ID：`15CHDnUxAayKexW04MLANAj1jyuZp3yOYn6clL0bhpp8CkkL1Vt7GDB3n`
@@ -33,3 +33,5 @@ evan-toeic-lab/
 6. 網站實測顯示「M0 資料結構正常」。
 
 詳細決策與驗收條件見 [docs/master-plan.md](docs/master-plan.md)。
+
+M1 的欄位格式、去重規則、錯誤分類與續跑方式見 [docs/m1-word-library.md](docs/m1-word-library.md)。

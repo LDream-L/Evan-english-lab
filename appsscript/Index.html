@@ -6,10 +6,11 @@
   </head>
   <body>
     <main class="shell">
-      <header>
-        <p class="eyebrow">Vocabulary V1</p>
-        <h1 id="app-name">Evan TOEIC Lab</h1>
+      <header class="hero">
+        <div><p class="eyebrow">Vocabulary V1</p><h1 id="app-name">Evan TOEIC Lab</h1></div>
+        <span id="app-version" class="badge">載入中</span>
       </header>
+
       <section class="card" aria-live="polite">
         <h2>系統狀態</h2>
         <p id="status">正在連接資料庫…</p>
@@ -21,8 +22,59 @@
         </dl>
         <button type="button" disabled>開始今日學習（M2 開放）</button>
       </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div><p class="eyebrow">M1</p><h2>單字庫</h2></div><span id="word-count" class="muted">—</span>
+        </div>
+        <div class="toolbar">
+          <label class="grow">搜尋<input id="word-search" type="search" placeholder="英文、中文意思或詞性"></label>
+          <label>狀態<select id="word-status"><option value="active">啟用</option><option value="draft">草稿</option><option value="archived">已封存</option><option value="all">全部</option></select></label>
+          <button id="search-words" type="button" class="compact">查詢</button>
+        </div>
+        <div id="word-list" class="word-list" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div><p class="eyebrow">CRUD</p><h2 id="word-form-title">新增單字</h2></div>
+          <button id="cancel-word-edit" type="button" class="text-button hidden">取消編輯</button>
+        </div>
+        <form id="word-form" class="form-grid">
+          <input id="word-id" type="hidden"><input id="word-row-version" type="hidden">
+          <label>英文原形<input id="word-lemma" name="lemma" autocomplete="off" required></label>
+          <label>台灣繁中意思<input id="word-meaning" name="meaning" required></label>
+          <label>詞性<select id="word-pos" required><option value="noun">名詞 noun</option><option value="verb">動詞 verb</option><option value="adjective">形容詞 adjective</option><option value="adverb">副詞 adverb</option><option value="pronoun">代名詞 pronoun</option><option value="preposition">介系詞 preposition</option><option value="conjunction">連接詞 conjunction</option><option value="determiner">限定詞 determiner</option><option value="interjection">感嘆詞 interjection</option><option value="phrase">片語 phrase</option><option value="other">其他</option></select></label>
+          <label>來源<select id="word-source"><option value="">未指定</option></select></label>
+          <label>優先度<select id="word-priority"><option value="high">高</option><option value="normal" selected>一般</option><option value="low">低</option></select></label>
+          <button type="submit">儲存單字</button>
+        </form>
+        <p id="word-form-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <div><p class="eyebrow">Sources</p><h2>資料來源</h2></div>
+        <form id="source-form" class="inline-form">
+          <label class="grow">名稱<input id="source-name" placeholder="例如：工作文章、TOEIC 公開字表" required></label>
+          <label>類型<select id="source-type"><option value="manual">手動</option><option value="article">文章</option><option value="dataset">資料集</option></select></label>
+          <button type="submit" class="compact">新增來源</button>
+        </form>
+        <p id="source-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <div><p class="eyebrow">Import</p><h2>批次匯入</h2></div>
+        <p class="muted">CSV／TSV 欄位：<code>lemma</code>、<code>primary_meaning_zh</code>、<code>pos</code>；另可包含 <code>source_id</code>、<code>priority</code>。</p>
+        <label>CSV 或 TSV 檔案<input id="import-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"></label>
+        <label>或貼上內容<textarea id="import-text" rows="8" placeholder="lemma,primary_meaning_zh,pos&#10;reimburse,報銷,verb"></textarea></label>
+        <div class="toolbar">
+          <label>預設來源<select id="import-source"><option value="">未指定</option></select></label>
+          <label class="checkbox"><input id="update-existing" type="checkbox">更新已有但內容不同的單字</label>
+        </div>
+        <div class="button-row"><button id="preview-import" type="button">預覽匯入</button><button id="start-import" type="button" disabled>開始匯入</button></div>
+        <pre id="import-summary" class="summary" aria-live="polite">尚未讀取資料</pre>
+      </section>
     </main>
     <?!= include('JavaScript'); ?>
   </body>
 </html>
-

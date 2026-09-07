@@ -1,6 +1,6 @@
 # Evan TOEIC Lab｜完整專案主計畫
 
-版本：v0.1.1-m0
+版本：v0.2.0-m1
 
 日期：2026-09-06
 
@@ -276,4 +276,4 @@ Vocabulary V1
 
 ## 15. 下一個施工批次
 
-M0 尚需把本地骨架連到 GitHub、Google Sheet 與 Apps Script，執行 `setupProject()`、`healthCheck()`，再部署私人 Web App。完成後直接進 M1，不重畫首頁。
+M0 已完成。M1 已建立單字 CRUD、來源、搜尋、匯入預覽、持久化 staging 與分批續跑；線上驗收通過後進入 M1A 文章擷取與自動補全，再進 M2 快速預習。

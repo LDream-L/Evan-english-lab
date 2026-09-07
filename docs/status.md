@@ -5,7 +5,7 @@
 | 階段 | 狀態 | 完成度 | 阻塞 |
 |---|---|---:|---|
 | M0 專案骨架 | 已完成 | 100% | 無 |
-| M1 單字資料庫 | 待開始 | 0% | 無 |
+| M1 單字資料庫 | 線上驗收中 | 85% | 等 Apps Script migration 與 Web App 驗收 |
 | M1A 文章擷取／自動補全 | 已完成規格 | 15% | 等 M1 資料層與補全服務決策 |
 | M2 快速預習 | 未開始 | 0% | 等 M1 |
 | M3 正式複習 | 未開始 | 0% | 等 M2 |
@@ -16,6 +16,13 @@
 
 ## 本批已完成
 
+- 實作單字新增、讀取、更新、封存與復原，更新使用 `row_version` 防止舊頁面覆蓋。
+- 實作來源新增、更新與封存；單字保存不可變 `source_id` 關聯。
+- 實作 NFKC、大小寫、空白與詞性縮寫正規化；重複鍵為 `normalized_lemma + pos`。
+- 實作 CSV／TSV 預覽，分類新增、更新、跳過、衝突與錯誤。
+- schema 升級至 v3，新增 `import_staging`；每批最多 200 筆，可從 Google Sheets 找回未完成工作。
+- 新增 ID→列號短期快取，命中後仍驗證實際 ID，避免人工插列造成過期索引誤寫。
+- 本地自動測試涵蓋 1,000 筆匯入分類與主要衝突規則。
 - 連接 GitHub repository `LDream-L/Evan-english-lab`，以 `main` 作為唯一正式原始碼。
 - 建立正式 Google Sheet，完成 13/13 工作表與欄位驗證。
 - 建立並綁定 standalone Apps Script；正式 Spreadsheet ID 存於 Script Properties，不寫入 GitHub。
@@ -32,6 +39,5 @@
 
 ## 下一批
 
-- 進入 M1：建立單字 CRUD、批次匯入、正規化與重複資料處理。
-- 建立 ID→列號索引及批次讀寫層，避免每次更新掃描整張 Sheet。
-- 補上 M1 自動測試、資料驗證與線上驗收。
+- 完成 M1 Apps Script 線上遷移、部署與 CRUD／匯入 smoke test。
+- 進入 M1A：文章擷取、候選排序、自動補全 job 與來源追蹤。

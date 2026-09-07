@@ -20,8 +20,23 @@ test('web app is private and executes as deployer', () => {
 test('automatic enrichment schema is versioned', () => {
   const config = fs.readFileSync(path.join(__dirname, '..', 'appsscript', 'Config.gs'), 'utf8');
   const schema = fs.readFileSync(path.join(__dirname, '..', 'appsscript', 'Schema.gs'), 'utf8');
-  assert.match(config, /schemaVersion:\s*2/);
+  assert.match(config, /schemaVersion:\s*3/);
   for (const field of ['provenance_ref', 'generator_version', 'confidence', 'validation_status']) {
     assert.match(schema, new RegExp('\\b' + field + '\\b'));
+  }
+});
+
+test('M1 schema keeps resumable import staging and forward migration', () => {
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'appsscript', 'Schema.gs'), 'utf8');
+  assert.match(schema, /import_staging:\s*\[/);
+  assert.match(schema, /options_json/);
+  assert.match(schema, /function migrateSchemaHeaders_/);
+});
+
+test('M1 front end renders user data without innerHTML', () => {
+  const client = fs.readFileSync(path.join(__dirname, '..', 'appsscript', 'JavaScript.html'), 'utf8');
+  assert.doesNotMatch(client, /\.innerHTML\s*=/);
+  for (const method of ['createWord', 'updateWord', 'setWordArchived', 'previewWordImport', 'startWordImport', 'continueWordImport']) {
+    assert.match(client, new RegExp("['\"]" + method + "['\"]"));
   }
 });

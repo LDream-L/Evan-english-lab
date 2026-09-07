@@ -1,4 +1,4 @@
-# Database Schema v1
+# Database Schema v3
 
 ## 關係
 
@@ -8,6 +8,7 @@ sources 1 ── N words 1 ── N word_details
                                       └── N reviews
 daily_sessions 1 ── N reviews
 import_jobs N ── 1 sources
+import_jobs 1 ── N import_staging
 article_sources 1 ── N word_occurrences N ── 1 words
 words 1 ── N enrichment_jobs
 ```
@@ -24,6 +25,8 @@ words 1 ── N enrichment_jobs
 - 文章原則上只保存 URL、內容雜湊與必要短句，不複製整篇受著作權保護文章。
 - 日期一律保存 ISO 8601 完整時間；顯示時轉 Asia/Taipei。
 - 刪除單字採 `status=archived`，避免 review 外鍵失效。
+- `import_staging` 保存每列正規化後 payload、預覽分類與處理結果；瀏覽器關閉後仍可依 `import_id` 續跑。
+- schema v2→v3 只在 `import_jobs` 末端新增 `options_json`，並新增 `import_staging`；不移動既有欄位。
 
 ## 詳細資料表
 

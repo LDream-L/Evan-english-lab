@@ -8,7 +8,8 @@ const SHEET_SCHEMAS = Object.freeze({
   reviews: ['review_id', 'idempotency_key', 'session_id', 'card_id', 'word_id', 'review_type', 'rating', 'result', 'response_ms', 'answer', 'reviewed_at', 'previous_due', 'scheduled_days', 'elapsed_days', 'algorithm_version', 'created_at'],
   memory_state: ['card_id', 'state', 'difficulty', 'stability', 'due_at', 'last_review_at', 'scheduled_days', 'elapsed_days', 'reps', 'lapses', 'learning_step', 'last_rating', 'algorithm_version', 'row_version', 'updated_at'],
   daily_sessions: ['session_id', 'study_date', 'planned_minutes', 'status', 'overdue_count', 'due_count', 'weak_count', 'new_count', 'queue_json', 'started_at', 'completed_at', 'updated_at'],
-  import_jobs: ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at'],
+  import_jobs: ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at', 'options_json'],
+  import_staging: ['import_id', 'row_number', 'payload_json', 'fingerprint', 'preview_action', 'status', 'result_action', 'error_message', 'word_id', 'processed_at', 'created_at'],
   article_sources: ['article_id', 'title', 'url', 'source_type', 'language', 'content_hash', 'copyright_policy', 'status', 'created_at', 'processed_at'],
   word_occurrences: ['occurrence_id', 'article_id', 'word_id', 'surface_form', 'sentence_excerpt', 'position_index', 'selection_reason', 'selected', 'created_at'],
   enrichment_jobs: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at']
@@ -22,6 +23,7 @@ const SHEET_SCHEMAS = Object.freeze({
  */
 function ensureSchema_(spreadsheet) {
   const now = new Date().toISOString();
+  migrateSchemaHeaders_(spreadsheet);
   Object.keys(SHEET_SCHEMAS).forEach(function(sheetName) {
     const headers = SHEET_SCHEMAS[sheetName];
     let sheet = spreadsheet.getSheetByName(sheetName);
@@ -48,4 +50,22 @@ function ensureSchema_(spreadsheet) {
     app_name: APP_CONFIG.appName
   }, now);
   upsertKeyValueRows_(spreadsheet.getSheetByName('settings'), APP_CONFIG.defaultSettings, now);
+}
+
+/**
+ * 執行只新增欄位的向前遷移，不移動或刪除既有資料。
+ * 時間複雜度：O(c)，c 為受遷移表的欄位數。
+ * 空間複雜度：O(c)。
+ * 更快替代：直接假設全新資料庫可省略比對，但會讓既有 v2 資料庫無法安全升級；因此保留明確 header migration。
+ */
+function migrateSchemaHeaders_(spreadsheet) {
+  const sheet = spreadsheet.getSheetByName('import_jobs');
+  if (!sheet || sheet.getLastColumn() === 0) return;
+
+  const v2Headers = ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at'];
+  const width = sheet.getLastColumn();
+  const actual = sheet.getRange(1, 1, 1, width).getValues()[0];
+  if (JSON.stringify(actual) === JSON.stringify(v2Headers)) {
+    sheet.getRange(1, v2Headers.length + 1).setValue('options_json').setFontWeight('bold');
+  }
 }

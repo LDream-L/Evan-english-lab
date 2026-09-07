@@ -76,7 +76,7 @@ function getBootstrapData() {
   const health = healthCheck();
   return {
     appName: APP_CONFIG.appName,
-    version: 'v0.1.1-m0',
+    version: APP_CONFIG.appVersion,
     health: health,
     dashboard: {
       plannedMinutes: 20,

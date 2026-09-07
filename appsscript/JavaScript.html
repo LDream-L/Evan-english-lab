@@ -1,30 +1,230 @@
 <script>
+  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv' };
+
+  function callServer(name, args) {
+    return new Promise(function(resolve, reject) {
+      const runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      runner[name](...(args || []));
+    });
+  }
+
+  function errorText(error) { return error && error.message ? error.message : String(error); }
+
+  function setMessage(id, text, isError) {
+    const element = document.getElementById(id);
+    element.textContent = text || '';
+    element.classList.toggle('error', Boolean(isError));
+  }
+
   /**
-   * 載入首頁啟動資料。
-   * 時間複雜度：O(1)（M0 固定欄位）。
-   * 空間複雜度：O(1)。
-   * 更快替代：靜態渲染可避免 RPC，但無法呈現即時資料；正式版採單次批次 bootstrap，避免多個短 RPC。
+   * 一次載入首頁、來源與單字列表。
+   * 時間複雜度：O(n log n)，n 為單字數。
+   * 空間複雜度：O(n)。
+   * 更快替代：拆成多個延遲 RPC 可縮短首屏，但增加網路往返；M1 以並行呼叫保持各區獨立失敗。
    */
-  function loadDashboard() {
-    google.script.run
-      .withSuccessHandler(renderDashboard)
-      .withFailureHandler(renderError)
-      .getBootstrapData();
+  async function initializeApp() {
+    bindEvents();
+    await Promise.all([loadDashboard(), loadSources(), loadWords()]);
+    await resumeImportIfNeeded();
   }
 
-  function renderDashboard(data) {
-    document.getElementById('app-name').textContent = data.appName;
-    document.getElementById('status').textContent = data.health.ok ? 'M0 資料結構正常' : '資料結構異常：' + data.health.problems.join(', ');
-    document.getElementById('minutes').textContent = data.dashboard.plannedMinutes + ' 分鐘';
-    document.getElementById('due').textContent = data.dashboard.due;
-    document.getElementById('overdue').textContent = data.dashboard.overdue;
-    document.getElementById('new-words').textContent = data.dashboard.newWords;
+  async function loadDashboard() {
+    try {
+      const data = await callServer('getBootstrapData');
+      document.getElementById('app-name').textContent = data.appName;
+      document.getElementById('app-version').textContent = data.version;
+      document.getElementById('status').textContent = data.health.ok ? '資料結構正常' : '資料結構異常：' + data.health.problems.join(', ');
+      document.getElementById('minutes').textContent = data.dashboard.plannedMinutes + ' 分鐘';
+      document.getElementById('due').textContent = data.dashboard.due;
+      document.getElementById('overdue').textContent = data.dashboard.overdue;
+      document.getElementById('new-words').textContent = data.dashboard.newWords;
+    } catch (error) { document.getElementById('status').textContent = '連線失敗：' + errorText(error); }
   }
 
-  function renderError(error) {
-    document.getElementById('status').textContent = '連線失敗：' + (error && error.message ? error.message : String(error));
+  async function loadSources() {
+    try {
+      uiState.sources = await callServer('listSources', [false]);
+      ['word-source', 'import-source'].forEach(function(id) {
+        const select = document.getElementById(id);
+        const current = select.value;
+        while (select.options.length > 1) select.remove(1);
+        uiState.sources.forEach(function(source) {
+          const option = document.createElement('option');
+          option.value = source.source_id; option.textContent = source.name; select.appendChild(option);
+        });
+        select.value = current;
+      });
+    } catch (error) { setMessage('source-message', '來源載入失敗：' + errorText(error), true); }
   }
 
-  document.addEventListener('DOMContentLoaded', loadDashboard);
+  /**
+   * 查詢並安全渲染單字，不使用 innerHTML。
+   * 時間複雜度：O(n log n)。
+   * 空間複雜度：O(n)。
+   * 更快替代：伺服器維護排序索引可改善大量資料；個人字庫規模先採批次搜尋。
+   */
+  async function loadWords() {
+    const query = document.getElementById('word-search').value;
+    const status = document.getElementById('word-status').value;
+    const list = document.getElementById('word-list');
+    list.textContent = '載入中…';
+    try {
+      const result = await callServer('searchWords', [query, { status: status }, 0, 100]);
+      uiState.words = result.items;
+      document.getElementById('word-count').textContent = '共 ' + result.total + ' 筆';
+      list.textContent = '';
+      if (!result.items.length) { list.textContent = '目前沒有符合條件的單字。'; return; }
+      result.items.forEach(function(word) { list.appendChild(createWordElement(word)); });
+    } catch (error) { list.textContent = '單字載入失敗：' + errorText(error); }
+  }
+
+  function createWordElement(word) {
+    const article = document.createElement('article'); article.className = 'word-item';
+    const title = document.createElement('div'); title.className = 'word-main'; title.textContent = word.lemma;
+    const meta = document.createElement('small'); meta.textContent = word.pos + ' · ' + word.status + ' · v' + word.row_version; title.appendChild(meta);
+    const meaning = document.createElement('div'); meaning.textContent = word.primary_meaning_zh;
+    const actions = document.createElement('div'); actions.className = 'word-actions';
+    const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = '編輯'; edit.addEventListener('click', function() { beginWordEdit(word); });
+    const archive = document.createElement('button'); archive.type = 'button'; archive.textContent = word.status === 'archived' ? '復原' : '封存';
+    archive.addEventListener('click', function() { toggleWordArchive(word); });
+    actions.append(edit, archive); article.append(title, meaning, actions); return article;
+  }
+
+  function beginWordEdit(word) {
+    document.getElementById('word-form-title').textContent = '編輯單字';
+    document.getElementById('cancel-word-edit').classList.remove('hidden');
+    document.getElementById('word-id').value = word.word_id; document.getElementById('word-row-version').value = word.row_version;
+    document.getElementById('word-lemma').value = word.lemma; document.getElementById('word-meaning').value = word.primary_meaning_zh;
+    document.getElementById('word-pos').value = word.pos; document.getElementById('word-source').value = word.source_id || '';
+    document.getElementById('word-priority').value = word.priority || 'normal';
+    document.getElementById('word-form').dataset.status = word.status || 'active';
+    document.getElementById('word-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function resetWordForm() {
+    document.getElementById('word-form').reset(); document.getElementById('word-id').value = ''; document.getElementById('word-row-version').value = '';
+    document.getElementById('word-form-title').textContent = '新增單字'; document.getElementById('cancel-word-edit').classList.add('hidden');
+    document.getElementById('word-form').dataset.status = 'active';
+  }
+
+  async function saveWord(event) {
+    event.preventDefault();
+    const id = document.getElementById('word-id').value;
+    const payload = { lemma: document.getElementById('word-lemma').value, primary_meaning_zh: document.getElementById('word-meaning').value,
+      pos: document.getElementById('word-pos').value, source_id: document.getElementById('word-source').value,
+      priority: document.getElementById('word-priority').value, status: document.getElementById('word-form').dataset.status || 'active' };
+    try {
+      if (id) await callServer('updateWord', [id, payload, Number(document.getElementById('word-row-version').value)]);
+      else await callServer('createWord', [payload]);
+      resetWordForm(); setMessage('word-form-message', id ? '單字已更新。' : '單字已新增。'); await loadWords();
+    } catch (error) { setMessage('word-form-message', '儲存失敗：' + errorText(error), true); }
+  }
+
+  async function toggleWordArchive(word) {
+    try { await callServer('setWordArchived', [word.word_id, word.status !== 'archived', Number(word.row_version)]); await loadWords(); }
+    catch (error) { setMessage('word-form-message', '狀態更新失敗：' + errorText(error), true); }
+  }
+
+  async function saveSource(event) {
+    event.preventDefault();
+    try {
+      await callServer('createSource', [{ name: document.getElementById('source-name').value, type: document.getElementById('source-type').value }]);
+      event.target.reset(); setMessage('source-message', '來源已新增。'); await loadSources();
+    } catch (error) { setMessage('source-message', '新增失敗：' + errorText(error), true); }
+  }
+
+  /**
+   * 解析支援引號、跳脫雙引號與換行欄位的 CSV／TSV。
+   * 時間複雜度：O(k)，k 為檔案字元數。
+   * 空間複雜度：O(k)。
+   * 更快替代：split('\n') 常數較小但會破壞引號內換行與逗號；採單次狀態機掃描。
+   */
+  function parseDelimitedText(text) {
+    const source = String(text || '').replace(/^\uFEFF/, '');
+    const delimiter = (source.match(/\t/g) || []).length > (source.match(/,/g) || []).length ? '\t' : ',';
+    const rows = []; let row = [], field = '', quoted = false;
+    for (let index = 0; index < source.length; index += 1) {
+      const char = source[index];
+      if (char === '"') { if (quoted && source[index + 1] === '"') { field += '"'; index += 1; } else quoted = !quoted; }
+      else if (char === delimiter && !quoted) { row.push(field); field = ''; }
+      else if ((char === '\n' || char === '\r') && !quoted) {
+        if (char === '\r' && source[index + 1] === '\n') index += 1;
+        row.push(field); field = ''; if (row.some(function(value) { return value.trim() !== ''; })) rows.push(row); row = [];
+      } else field += char;
+    }
+    row.push(field); if (row.some(function(value) { return value.trim() !== ''; })) rows.push(row);
+    if (quoted) throw new Error('CSV 引號未正確結束');
+    if (rows.length < 2) throw new Error('至少需要表頭與一筆資料');
+    const aliases = { meaning: 'primary_meaning_zh', meaning_zh: 'primary_meaning_zh', chinese: 'primary_meaning_zh', word: 'lemma' };
+    const headers = rows[0].map(function(value) { const key = value.trim().toLowerCase(); return aliases[key] || key; });
+    ['lemma', 'primary_meaning_zh', 'pos'].forEach(function(required) { if (!headers.includes(required)) throw new Error('缺少欄位：' + required); });
+    return rows.slice(1).map(function(values) { const result = {}; headers.forEach(function(header, index) { result[header] = values[index] == null ? '' : values[index]; }); return result; });
+  }
+
+  async function readImportFile(event) {
+    const file = event.target.files[0]; if (!file) return;
+    uiState.importFilename = file.name; document.getElementById('import-text').value = await file.text();
+    document.getElementById('start-import').disabled = true; document.getElementById('import-summary').textContent = '檔案已讀取，請先預覽。';
+  }
+
+  async function previewImport() {
+    try {
+      uiState.importRows = parseDelimitedText(document.getElementById('import-text').value);
+      const options = { source_id: document.getElementById('import-source').value, update_existing: document.getElementById('update-existing').checked };
+      const preview = await callServer('previewWordImport', [uiState.importRows, options]);
+      document.getElementById('import-summary').textContent = formatImportSummary(preview.summary, preview.total, '預覽完成');
+      document.getElementById('start-import').disabled = false;
+    } catch (error) { document.getElementById('start-import').disabled = true; document.getElementById('import-summary').textContent = '預覽失敗：' + errorText(error); }
+  }
+
+  function formatImportSummary(summary, total, label) {
+    return [label, '總列數：' + total, '新增：' + (summary.insert || summary.inserted_rows || 0), '更新：' + (summary.update || summary.updated_rows || 0),
+      '跳過：' + (summary.skip || summary.skipped_rows || 0), '衝突：' + (summary.conflict || 0), '錯誤：' + (summary.error || summary.error_rows || 0)].join('\n');
+  }
+
+  async function startImport() {
+    document.getElementById('start-import').disabled = true;
+    try {
+      const result = await callServer('startWordImport', [{ rows: uiState.importRows, filename: uiState.importFilename,
+        source_id: document.getElementById('import-source').value, update_existing: document.getElementById('update-existing').checked }]);
+      localStorage.setItem('evan-toeic-active-import', result.import_id); await continueImport(result.import_id);
+    } catch (error) { document.getElementById('import-summary').textContent = '匯入建立失敗：' + errorText(error); }
+  }
+
+  async function continueImport(importId) {
+    try {
+      let job = await callServer('continueWordImport', [importId, 200]);
+      while (true) {
+        document.getElementById('import-summary').textContent = formatImportSummary(job, job.total_rows, '匯入狀態：' + job.status) + '\n進度列：' + job.cursor_row;
+        if (job.status === 'completed') break;
+        job = await callServer('continueWordImport', [importId, 200]);
+      }
+      localStorage.removeItem('evan-toeic-active-import'); await loadWords();
+    } catch (error) { document.getElementById('import-summary').textContent = '匯入暫停，可重新開啟頁面續跑：' + errorText(error); }
+  }
+
+  async function resumeImportIfNeeded() {
+    let importId = localStorage.getItem('evan-toeic-active-import');
+    if (!importId) {
+      const job = await callServer('findLatestOpenImportJob');
+      importId = job && job.import_id;
+    }
+    if (!importId) return;
+    localStorage.setItem('evan-toeic-active-import', importId);
+    document.getElementById('import-summary').textContent = '偵測到未完成匯入，正在續跑…'; await continueImport(importId);
+  }
+
+  function bindEvents() {
+    document.getElementById('search-words').addEventListener('click', loadWords);
+    document.getElementById('word-search').addEventListener('keydown', function(event) { if (event.key === 'Enter') loadWords(); });
+    document.getElementById('word-form').addEventListener('submit', saveWord);
+    document.getElementById('cancel-word-edit').addEventListener('click', resetWordForm);
+    document.getElementById('source-form').addEventListener('submit', saveSource);
+    document.getElementById('import-file').addEventListener('change', readImportFile);
+    document.getElementById('import-text').addEventListener('input', function() { document.getElementById('start-import').disabled = true; });
+    document.getElementById('preview-import').addEventListener('click', previewImport);
+    document.getElementById('start-import').addEventListener('click', startImport);
+  }
+
+  document.addEventListener('DOMContentLoaded', initializeApp);
 </script>
-

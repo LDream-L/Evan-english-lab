@@ -63,6 +63,28 @@
       </section>
 
       <section class="card">
+        <div class="section-heading">
+          <div><p class="eyebrow">M1A</p><h2>從文章抓單字</h2></div>
+          <span id="enrichment-provider" class="badge">檢查補全服務…</span>
+        </div>
+        <p class="muted">可貼英文文章、輸入公開網址或選擇 TXT。系統只保存來源、內容雜湊與必要句子摘錄，不保存完整文章。</p>
+        <div class="form-grid">
+          <label>文章標題<input id="article-title" placeholder="例如：Quarterly sales meeting"></label>
+          <label>公開文章網址<input id="article-url" type="url" placeholder="https://example.com/article"></label>
+        </div>
+        <label>TXT 檔案<input id="article-file" type="file" accept=".txt,text/plain"></label>
+        <label>或貼上英文文章<textarea id="article-text" rows="10" placeholder="Paste the English article here..."></textarea></label>
+        <div class="button-row">
+          <button id="preview-article" type="button">分析候選單字</button>
+          <button id="queue-article" type="button" disabled>儲存並加入補全佇列</button>
+          <button id="process-enrichment" type="button" class="secondary">處理補全工作</button>
+        </div>
+        <p id="article-message" class="message" aria-live="polite"></p>
+        <div id="article-candidates" class="candidate-list" aria-live="polite"></div>
+        <pre id="enrichment-summary" class="summary compact-summary" aria-live="polite">補全佇列載入中…</pre>
+      </section>
+
+      <section class="card">
         <div><p class="eyebrow">Import</p><h2>批次匯入</h2></div>
         <p class="muted">CSV／TSV 欄位：<code>lemma</code>、<code>primary_meaning_zh</code>、<code>pos</code>；另可包含 <code>source_id</code>、<code>priority</code>。</p>
         <label>CSV 或 TSV 檔案<input id="import-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"></label>

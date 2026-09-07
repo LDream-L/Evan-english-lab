@@ -1,5 +1,5 @@
 <script>
-  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv' };
+  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv', articleCandidates: [] };
 
   function callServer(name, args) {
     return new Promise(function(resolve, reject) {
@@ -24,7 +24,7 @@
    */
   async function initializeApp() {
     bindEvents();
-    await Promise.all([loadDashboard(), loadSources(), loadWords()]);
+    await Promise.all([loadDashboard(), loadSources(), loadWords(), loadEnrichmentStatus()]);
     await resumeImportIfNeeded();
   }
 
@@ -133,6 +133,105 @@
     } catch (error) { setMessage('source-message', '新增失敗：' + errorText(error), true); }
   }
 
+  function articleInput() {
+    return {
+      title: document.getElementById('article-title').value,
+      url: document.getElementById('article-url').value,
+      text: document.getElementById('article-text').value,
+      source_type: document.getElementById('article-file').files.length ? 'text_file' : 'pasted_text'
+    };
+  }
+
+  async function readArticleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    document.getElementById('article-text').value = await file.text();
+    if (!document.getElementById('article-title').value) document.getElementById('article-title').value = file.name.replace(/\.txt$/i, '');
+    resetArticlePreview();
+  }
+
+  function resetArticlePreview() {
+    uiState.articleCandidates = [];
+    document.getElementById('article-candidates').textContent = '';
+    document.getElementById('queue-article').disabled = true;
+  }
+
+  function createCandidateElement(candidate) {
+    const row = document.createElement('label'); row.className = 'candidate-item';
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = Boolean(candidate.selected); checkbox.dataset.lemma = candidate.lemma;
+    const word = document.createElement('span'); word.className = 'candidate-word'; word.textContent = candidate.lemma + (candidate.frequency > 1 ? ' × ' + candidate.frequency : '');
+    const context = document.createElement('span'); context.textContent = candidate.sentence_excerpt || candidate.selection_reason;
+    const score = document.createElement('span'); score.className = 'candidate-score'; score.textContent = '分數 ' + candidate.score;
+    row.append(checkbox, word, context, score); return row;
+  }
+
+  /**
+   * 將後端候選清單以 DOM API 安全渲染，避免文章內容成為 HTML。
+   * 時間複雜度：O(n)，空間複雜度：O(n)。
+   * 更快替代：innerHTML 常數較小但會引入 XSS；正式介面只用 textContent/createElement。
+   */
+  async function previewArticle() {
+    const container = document.getElementById('article-candidates');
+    container.textContent = '文章分析中…';
+    document.getElementById('queue-article').disabled = true;
+    try {
+      const result = await callServer('previewArticleImport', [articleInput()]);
+      uiState.articleCandidates = result.candidates;
+      container.textContent = '';
+      result.candidates.forEach(function(candidate) { container.appendChild(createCandidateElement(candidate)); });
+      const excluded = result.exclusions;
+      setMessage('article-message', '找到 ' + result.candidates.length + ' 個候選字；略過既有 ' + excluded.existing_word + '、已掌握 ' + excluded.mastered + '。');
+      document.getElementById('queue-article').disabled = !result.candidates.length;
+    } catch (error) {
+      container.textContent = '';
+      setMessage('article-message', '分析失敗：' + errorText(error), true);
+    }
+  }
+
+  function selectedArticleLemmas() {
+    return Array.from(document.querySelectorAll('#article-candidates input[type="checkbox"]:checked')).map(function(input) { return input.dataset.lemma; });
+  }
+
+  async function queueArticle() {
+    const selected = selectedArticleLemmas();
+    if (!selected.length) { setMessage('article-message', '請至少勾選一個候選單字。', true); return; }
+    document.getElementById('queue-article').disabled = true;
+    try {
+      const result = await callServer('queueArticleImport', [articleInput(), selected]);
+      setMessage('article-message', '文章已保存；新增 ' + result.queued + ' 個補全工作，已有 ' + result.already_present + ' 個。');
+      await loadEnrichmentStatus();
+    } catch (error) {
+      setMessage('article-message', '建立佇列失敗：' + errorText(error), true);
+      document.getElementById('queue-article').disabled = false;
+    }
+  }
+
+  function formatEnrichmentStatus(result) {
+    const provider = result.provider;
+    const counts = result.counts || {};
+    return ['服務：' + provider.provider + ' / ' + provider.model, '設定：' + (provider.configured ? '可用' : '尚未設定 API 金鑰'),
+      '排隊：' + (counts.queued || 0), '處理中：' + (counts.processing || 0), '完成：' + (counts.completed || 0), '失敗：' + (counts.failed || 0)].join('\n');
+  }
+
+  async function loadEnrichmentStatus() {
+    try {
+      const result = await callServer('getEnrichmentQueueStatus');
+      document.getElementById('enrichment-provider').textContent = result.provider.configured ? '自動補全可用' : '待設定補全服務';
+      document.getElementById('enrichment-summary').textContent = formatEnrichmentStatus(result);
+      document.getElementById('process-enrichment').disabled = !result.provider.configured;
+    } catch (error) { document.getElementById('enrichment-summary').textContent = '佇列狀態讀取失敗：' + errorText(error); }
+  }
+
+  async function processEnrichment() {
+    document.getElementById('process-enrichment').disabled = true;
+    try {
+      const result = await callServer('processEnrichmentJobs', [5]);
+      setMessage('article-message', result.status === 'idle' ? '目前沒有到期的補全工作。' : '本次處理 ' + result.processed.length + ' 個工作。');
+      await Promise.all([loadEnrichmentStatus(), loadWords()]);
+    } catch (error) { setMessage('article-message', '補全處理失敗：' + errorText(error), true); }
+    finally { await loadEnrichmentStatus(); }
+  }
+
   /**
    * 解析支援引號、跳脫雙引號與換行欄位的 CSV／TSV。
    * 時間複雜度：O(k)，k 為檔案字元數。
@@ -220,6 +319,12 @@
     document.getElementById('word-form').addEventListener('submit', saveWord);
     document.getElementById('cancel-word-edit').addEventListener('click', resetWordForm);
     document.getElementById('source-form').addEventListener('submit', saveSource);
+    document.getElementById('article-file').addEventListener('change', readArticleFile);
+    document.getElementById('article-url').addEventListener('input', resetArticlePreview);
+    document.getElementById('article-text').addEventListener('input', resetArticlePreview);
+    document.getElementById('preview-article').addEventListener('click', previewArticle);
+    document.getElementById('queue-article').addEventListener('click', queueArticle);
+    document.getElementById('process-enrichment').addEventListener('click', processEnrichment);
     document.getElementById('import-file').addEventListener('change', readImportFile);
     document.getElementById('import-text').addEventListener('input', function() { document.getElementById('start-import').disabled = true; });
     document.getElementById('preview-import').addEventListener('click', previewImport);

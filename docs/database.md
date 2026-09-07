@@ -27,6 +27,7 @@ words 1 ── N enrichment_jobs
 - 刪除單字採 `status=archived`，避免 review 外鍵失效。
 - `import_staging` 保存每列正規化後 payload、預覽分類與處理結果；瀏覽器關閉後仍可依 `import_id` 續跑。
 - schema v2→v3 只在 `import_jobs` 末端新增 `options_json`，並新增 `import_staging`；不移動既有欄位。
+- schema v3→v4 只在 `enrichment_jobs` 尾端新增 `idempotency_key`、`attempt_count`、`next_retry_at`、`updated_at`；不移動既有欄位。
 
 ## 詳細資料表
 

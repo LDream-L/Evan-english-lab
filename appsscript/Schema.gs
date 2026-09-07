@@ -12,7 +12,7 @@ const SHEET_SCHEMAS = Object.freeze({
   import_staging: ['import_id', 'row_number', 'payload_json', 'fingerprint', 'preview_action', 'status', 'result_action', 'error_message', 'word_id', 'processed_at', 'created_at'],
   article_sources: ['article_id', 'title', 'url', 'source_type', 'language', 'content_hash', 'copyright_policy', 'status', 'created_at', 'processed_at'],
   word_occurrences: ['occurrence_id', 'article_id', 'word_id', 'surface_form', 'sentence_excerpt', 'position_index', 'selection_reason', 'selected', 'created_at'],
-  enrichment_jobs: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at']
+  enrichment_jobs: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at', 'idempotency_key', 'attempt_count', 'next_retry_at', 'updated_at']
 });
 
 /**
@@ -59,13 +59,26 @@ function ensureSchema_(spreadsheet) {
  * 更快替代：直接假設全新資料庫可省略比對，但會讓既有 v2 資料庫無法安全升級；因此保留明確 header migration。
  */
 function migrateSchemaHeaders_(spreadsheet) {
-  const sheet = spreadsheet.getSheetByName('import_jobs');
-  if (!sheet || sheet.getLastColumn() === 0) return;
-
-  const v2Headers = ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at'];
-  const width = sheet.getLastColumn();
-  const actual = sheet.getRange(1, 1, 1, width).getValues()[0];
-  if (JSON.stringify(actual) === JSON.stringify(v2Headers)) {
-    sheet.getRange(1, v2Headers.length + 1).setValue('options_json').setFontWeight('bold');
-  }
+  const migrations = [
+    {
+      sheetName: 'import_jobs',
+      previous: ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at'],
+      append: ['options_json']
+    },
+    {
+      sheetName: 'enrichment_jobs',
+      previous: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at'],
+      append: ['idempotency_key', 'attempt_count', 'next_retry_at', 'updated_at']
+    }
+  ];
+  migrations.forEach(function(migration) {
+    const sheet = spreadsheet.getSheetByName(migration.sheetName);
+    if (!sheet || sheet.getLastColumn() === 0) return;
+    const width = sheet.getLastColumn();
+    const actual = sheet.getRange(1, 1, 1, width).getValues()[0];
+    if (JSON.stringify(actual) !== JSON.stringify(migration.previous)) return;
+    sheet.getRange(1, migration.previous.length + 1, 1, migration.append.length)
+      .setValues([migration.append])
+      .setFontWeight('bold');
+  });
 }

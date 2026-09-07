@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-- 版本：`v0.2.0-m1`
-- 階段：M1 單字資料庫
-- 已完成：M0 線上環境；M1 單字 CRUD、來源管理、搜尋、匯入預覽、分批續傳與 schema v3
+- 版本：`v0.2.1-m1a`
+- 階段：M1A 文章擷取／自動補全
+- 已完成：M1 單字庫；M1A 文章文字／公開網址／TXT 擷取、候選排序、冪等補全佇列與 Gemini provider adapter
 - 正式網站（僅擁有者可存取）：[Evan TOEIC Lab](https://script.google.com/macros/s/AKfycbzKWKoCo21QYwLcOrMukU_n5dOnLH2h0Uy-PzuDb7UdyFi8hxJOt19ky213gKjpJIrR/exec)
 - 正式資料庫：[Evan English Lab｜正式資料庫](https://docs.google.com/spreadsheets/d/1vq-icv9yjwoDtW2J7PQ1vb8eTkCtCWx-fgMVZAtB0jk/edit)
 - Apps Script 專案 ID：`15CHDnUxAayKexW04MLANAj1jyuZp3yOYn6clL0bhpp8CkkL1Vt7GDB3n`
@@ -35,3 +35,5 @@ evan-toeic-lab/
 詳細決策與驗收條件見 [docs/master-plan.md](docs/master-plan.md)。
 
 M1 的欄位格式、去重規則、錯誤分類與續跑方式見 [docs/m1-word-library.md](docs/m1-word-library.md)。
+
+M1A 的文章保存邊界、候選規則、補全信心門檻與 API 設定見 [docs/m1a-article-import.md](docs/m1a-article-import.md)。

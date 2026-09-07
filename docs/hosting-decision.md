@@ -20,7 +20,7 @@
 2. 發生問題可回復到已通過測試的版本，不依賴 Apps Script 編輯器的草稿。
 3. 可在部署前執行自動測試及語法檢查。
 4. 文件、schema migration 與程式碼可綁在同一版本。
-5. 未來可改用 `clasp`／CI 從 GitHub 部署，避免手動貼入造成程式分叉。
+5. 已建立 `clasp`／GitHub Actions 部署流程，避免手動貼入造成程式分叉。
 6. 日後更換主機時可以帶走程式，不被單一平台鎖住。
 
 GitHub 不保存 `SPREADSHEET_ID`、API 金鑰或個人學習紀錄；這些只存在私人 Google 環境。

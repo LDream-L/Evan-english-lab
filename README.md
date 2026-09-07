@@ -12,6 +12,8 @@
 
 目前不使用 GitHub Pages。Pages 只能託管靜態前端，不能直接執行本專案的 Apps Script／Sheets 後端；若硬拆為 Pages 前端，還需額外建立 API、OAuth、CORS 與權限層。完整理由與未來遷移門檻見 [docs/hosting-decision.md](docs/hosting-decision.md)。
 
+GitHub → Apps Script 的正式部署流程與一次性憑證設定見 [docs/deployment.md](docs/deployment.md)。
+
 ## 目前狀態
 
 - 版本：`v0.2.1-m1a`

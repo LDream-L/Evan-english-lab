@@ -26,6 +26,7 @@
 - schema v4 migration 只在 `enrichment_jobs` 尾端新增 4 欄，不移動既有資料。
 - M1A 本地測試加入網址安全、HTML 清理、候選排序、已收錄／已掌握排除與 UI 安全檢查。
 - 新增 GitHub Actions：每次 `main` push 或 pull request 自動執行 Node 測試與所有 `.gs` 語法檢查；workflow 只有 repository contents 唯讀權限。
+- 建立 GitHub → Apps Script production workflow：手動觸發、測試、`clasp push`、建立不可變 version、更新既有 deployment，並在 runner 結束時清除暫存憑證。
 
 - 實作單字新增、讀取、更新、封存與復原，更新使用 `row_version` 防止舊頁面覆蓋。
 - 實作來源新增、更新與封存；單字保存不可變 `source_id` 關聯。
@@ -53,6 +54,7 @@
 
 ## 下一批
 
-- 推送 GitHub `main`，同步 Apps Script 並執行 schema v4 遷移與線上健康檢查。
+- 完成 Apps Script API 與三個 GitHub Actions secrets 的一次性設定，執行首次 production workflow。
+- 同步 Apps Script 並執行 schema v4 遷移與線上健康檢查。
 - 以安全方式建立並保存 Gemini API 金鑰，執行一篇測試文章的端到端補全。
 - 完成後進入 M2 快速預習。

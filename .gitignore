@@ -1,7 +1,7 @@
 .clasp.json
+.clasprc.json
 .DS_Store
 node_modules/
 coverage/
 dist/
 *.log
-

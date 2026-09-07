@@ -1,0 +1,85 @@
+name: Deploy Apps Script
+
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: Deployment description
+        required: false
+        default: Manual production deployment
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run unit tests
+        run: node --test tests/*.test.js
+
+      - name: Check Apps Script syntax
+        shell: bash
+        run: |
+          for file in appsscript/*.gs; do
+            node --check < "$file"
+          done
+
+      - name: Configure clasp credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+        shell: bash
+        run: |
+          test -n "$CLASPRC_JSON" || { echo "Missing CLASPRC_JSON" >&2; exit 1; }
+          test -n "$CLASP_JSON" || { echo "Missing CLASP_JSON" >&2; exit 1; }
+          test -n "$CLASP_DEPLOYMENT_ID" || { echo "Missing CLASP_DEPLOYMENT_ID" >&2; exit 1; }
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '%s' "$CLASP_JSON" > .clasp.json
+          node -e "const fs=require('fs');const auth=JSON.parse(fs.readFileSync(process.env.HOME+'/.clasprc.json','utf8'));const project=JSON.parse(fs.readFileSync('.clasp.json','utf8'));if(!auth.tokens&&!auth.token)throw new Error('Invalid CLASPRC_JSON');if(!project.scriptId||project.rootDir!=='appsscript')throw new Error('Invalid CLASP_JSON');"
+
+      - name: Push GitHub source to Apps Script
+        run: npx --yes @google/clasp@3.4.1 push --force
+
+      - name: Create immutable Apps Script version
+        id: version
+        env:
+          DEPLOY_DESCRIPTION: ${{ inputs.description }}
+        shell: bash
+        run: |
+          DESCRIPTION="${DEPLOY_DESCRIPTION:-Manual production deployment} | ${GITHUB_SHA::7}"
+          VERSION_JSON="$(npx --yes @google/clasp@3.4.1 --json create-version "$DESCRIPTION")"
+          VERSION_NUMBER="$(node -e "const value=JSON.parse(process.argv[1]);if(!Number.isInteger(value.versionNumber))process.exit(1);process.stdout.write(String(value.versionNumber));" "$VERSION_JSON")"
+          echo "version_number=$VERSION_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Update existing production deployment
+        env:
+          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+          VERSION_NUMBER: ${{ steps.version.outputs.version_number }}
+          DEPLOY_DESCRIPTION: ${{ inputs.description }}
+        run: >-
+          npx --yes @google/clasp@3.4.1 --json update-deployment
+          "$CLASP_DEPLOYMENT_ID"
+          --versionNumber "$VERSION_NUMBER"
+          --description "${DEPLOY_DESCRIPTION:-Manual production deployment} | ${GITHUB_SHA::7}"
+
+      - name: Remove temporary credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json" .clasp.json

@@ -18,6 +18,7 @@ V1 不追求華麗介面，也不在即時學習流程中逐題呼叫 AI。文�
 |---|---|---|
 | 正式原始碼 | GitHub `main` 唯一正式版本 | 防止 Apps Script 編輯器與聊天附件形成分叉 |
 | V1 執行環境 | Apps Script 同時提供前端與後端 | 個人使用時省去 CORS、OAuth/API 驗證與額外主機 |
+| GitHub Pages | V1 不啟用 | Pages 僅能提供靜態前端；拆出後仍需 API、OAuth、CORS 與金鑰保護，對單人私人系統沒有收益 |
 | 資料庫 | Google Sheets | 資料可直接檢查、備份與手動修正，規模足夠 |
 | 前端拆檔 | Apps Script 的 `Index.html`＋CSS/JS `.html` 片段 | HTML Service 的 client code 需由 HTML 檔 include；不能原樣把 `.css`、`.js` 當 Web 靜態路徑 |
 | 學習單位 | `word` 與 `card` 分開 | 同一單字的 EN→ZH、ZH→EN、拼字、聽力是不同記憶，不能共用一筆狀態 |

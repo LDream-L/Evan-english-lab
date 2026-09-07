@@ -1,8 +1,8 @@
-const IMPORT_JOB_COLUMNS = Object.freeze(SHEET_SCHEMAS.import_jobs.reduce(function(result, name, index) {
+const IMPORT_JOB_COLUMNS = Object.freeze(getSheetSchemas_().import_jobs.reduce(function(result, name, index) {
   result[name] = index;
   return result;
 }, {}));
-const IMPORT_STAGING_COLUMNS = Object.freeze(SHEET_SCHEMAS.import_staging.reduce(function(result, name, index) {
+const IMPORT_STAGING_COLUMNS = Object.freeze(getSheetSchemas_().import_staging.reduce(function(result, name, index) {
   result[name] = index;
   return result;
 }, {}));
@@ -125,7 +125,7 @@ function startWordImport(request) {
   lock.waitLock(30000);
   try {
     jobSheet.getRange(jobSheet.getLastRow() + 1, 1, 1, jobRow.length).setValues([jobRow]);
-    stagingSheet.getRange(stagingSheet.getLastRow() + 1, 1, stageRows.length, SHEET_SCHEMAS.import_staging.length).setValues(stageRows);
+    stagingSheet.getRange(stagingSheet.getLastRow() + 1, 1, stageRows.length, getSheetSchemas_().import_staging.length).setValues(stageRows);
   } finally {
     lock.releaseLock();
   }
@@ -135,7 +135,7 @@ function startWordImport(request) {
 function getImportJobRow_(importId) {
   const sheet = getDatabase_().getSheetByName('import_jobs');
   const count = Math.max(sheet.getLastRow() - 1, 0);
-  const rows = count ? sheet.getRange(2, 1, count, SHEET_SCHEMAS.import_jobs.length).getValues() : [];
+  const rows = count ? sheet.getRange(2, 1, count, getSheetSchemas_().import_jobs.length).getValues() : [];
   const index = rows.findIndex(function(row) { return String(row[IMPORT_JOB_COLUMNS.import_id]) === String(importId); });
   if (index < 0) throw new Error('import_not_found:' + importId);
   return { sheet: sheet, rowNumber: index + 2, row: rows[index] };
@@ -143,7 +143,7 @@ function getImportJobRow_(importId) {
 
 function importJobToObject_(row) {
   const result = {};
-  SHEET_SCHEMAS.import_jobs.forEach(function(header, index) { result[header] = row[index]; });
+  getSheetSchemas_().import_jobs.forEach(function(header, index) { result[header] = row[index]; });
   return result;
 }
 
@@ -161,7 +161,7 @@ function findLatestOpenImportJob() {
   const sheet = getDatabase_().getSheetByName('import_jobs');
   const count = Math.max(sheet.getLastRow() - 1, 0);
   if (!count) return null;
-  const rows = sheet.getRange(2, 1, count, SHEET_SCHEMAS.import_jobs.length).getValues();
+  const rows = sheet.getRange(2, 1, count, getSheetSchemas_().import_jobs.length).getValues();
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const status = String(rows[index][IMPORT_JOB_COLUMNS.status]);
     if (status === 'queued' || status === 'running') return importJobToObject_(rows[index]);
@@ -212,7 +212,7 @@ function continueWordImport(importId, requestedBatchSize) {
 
     const stagingSheet = getDatabase_().getSheetByName('import_staging');
     const stagingCount = Math.max(stagingSheet.getLastRow() - 1, 0);
-    const stagingRows = stagingCount ? stagingSheet.getRange(2, 1, stagingCount, SHEET_SCHEMAS.import_staging.length).getValues() : [];
+    const stagingRows = stagingCount ? stagingSheet.getRange(2, 1, stagingCount, getSheetSchemas_().import_staging.length).getValues() : [];
     const candidates = [];
     stagingRows.forEach(function(row, index) {
       if (String(row[IMPORT_STAGING_COLUMNS.import_id]) === String(importId) && row[IMPORT_STAGING_COLUMNS.status] === 'pending' && candidates.length < batchSize) {
@@ -279,9 +279,9 @@ function continueWordImport(importId, requestedBatchSize) {
       changedStageIndexes.push(candidate.index);
     });
 
-    if (changedWordIndexes.length) writeChangedRows_(wordTable.sheet, wordTable.rows, changedWordIndexes, SHEET_SCHEMAS.words.length);
-    if (newRows.length) wordTable.sheet.getRange(wordTable.sheet.getLastRow() + 1, 1, newRows.length, SHEET_SCHEMAS.words.length).setValues(newRows);
-    if (changedStageIndexes.length) writeChangedRows_(stagingSheet, stagingRows, changedStageIndexes, SHEET_SCHEMAS.import_staging.length);
+    if (changedWordIndexes.length) writeChangedRows_(wordTable.sheet, wordTable.rows, changedWordIndexes, getSheetSchemas_().words.length);
+    if (newRows.length) wordTable.sheet.getRange(wordTable.sheet.getLastRow() + 1, 1, newRows.length, getSheetSchemas_().words.length).setValues(newRows);
+    if (changedStageIndexes.length) writeChangedRows_(stagingSheet, stagingRows, changedStageIndexes, getSheetSchemas_().import_staging.length);
 
     const hasPending = stagingRows.some(function(row) {
       return String(row[IMPORT_STAGING_COLUMNS.import_id]) === String(importId) && row[IMPORT_STAGING_COLUMNS.status] === 'pending';

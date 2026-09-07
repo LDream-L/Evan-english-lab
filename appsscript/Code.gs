@@ -47,13 +47,14 @@ function setupProject() {
 function healthCheck() {
   const spreadsheet = getDatabase_();
   const problems = [];
-  Object.keys(SHEET_SCHEMAS).forEach(function(sheetName) {
+  const schemas = getSheetSchemas_();
+  Object.keys(schemas).forEach(function(sheetName) {
     const sheet = spreadsheet.getSheetByName(sheetName);
     if (!sheet) {
       problems.push('missing:' + sheetName);
       return;
     }
-    const expected = SHEET_SCHEMAS[sheetName];
+    const expected = schemas[sheetName];
     const actual = sheet.getRange(1, 1, 1, expected.length).getValues()[0];
     if (JSON.stringify(actual) !== JSON.stringify(expected)) problems.push('header:' + sheetName);
   });

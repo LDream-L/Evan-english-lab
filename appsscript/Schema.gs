@@ -1,19 +1,32 @@
-const SHEET_SCHEMAS = Object.freeze({
-  meta: ['key', 'value', 'updated_at'],
-  settings: ['key', 'value', 'updated_at'],
-  sources: ['source_id', 'name', 'type', 'description', 'status', 'created_at', 'updated_at'],
-  words: ['word_id', 'lemma', 'normalized_lemma', 'primary_meaning_zh', 'pos', 'source_id', 'priority', 'status', 'enrichment_status', 'created_at', 'updated_at', 'row_version'],
-  word_details: ['detail_id', 'word_id', 'detail_type', 'value', 'language', 'sort_order', 'provenance_type', 'provenance_ref', 'generator_version', 'confidence', 'validation_status', 'created_at', 'updated_at'],
-  cards: ['card_id', 'word_id', 'card_type', 'prompt_language', 'answer_language', 'status', 'introduced_at', 'created_at', 'updated_at'],
-  reviews: ['review_id', 'idempotency_key', 'session_id', 'card_id', 'word_id', 'review_type', 'rating', 'result', 'response_ms', 'answer', 'reviewed_at', 'previous_due', 'scheduled_days', 'elapsed_days', 'algorithm_version', 'created_at'],
-  memory_state: ['card_id', 'state', 'difficulty', 'stability', 'due_at', 'last_review_at', 'scheduled_days', 'elapsed_days', 'reps', 'lapses', 'learning_step', 'last_rating', 'algorithm_version', 'row_version', 'updated_at'],
-  daily_sessions: ['session_id', 'study_date', 'planned_minutes', 'status', 'overdue_count', 'due_count', 'weak_count', 'new_count', 'queue_json', 'started_at', 'completed_at', 'updated_at'],
-  import_jobs: ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at', 'options_json'],
-  import_staging: ['import_id', 'row_number', 'payload_json', 'fingerprint', 'preview_action', 'status', 'result_action', 'error_message', 'word_id', 'processed_at', 'created_at'],
-  article_sources: ['article_id', 'title', 'url', 'source_type', 'language', 'content_hash', 'copyright_policy', 'status', 'created_at', 'processed_at'],
-  word_occurrences: ['occurrence_id', 'article_id', 'word_id', 'surface_form', 'sentence_excerpt', 'position_index', 'selection_reason', 'selected', 'created_at'],
-  enrichment_jobs: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at', 'idempotency_key', 'attempt_count', 'next_retry_at', 'updated_at']
-});
+var SHEET_SCHEMAS_CACHE_;
+
+/**
+ * 延遲建立 schema，避免 Apps Script 多檔案頂層載入順序造成 ReferenceError。
+ * 時間複雜度：首次 O(s × c)，後續 O(1)。
+ * 空間複雜度：O(s × c)。
+ * 更快替代：頂層常數可少一次函式呼叫，但跨檔案初始化順序不可靠；採快取函式確保任何載入順序都安全。
+ */
+function getSheetSchemas_() {
+  if (!SHEET_SCHEMAS_CACHE_) {
+    SHEET_SCHEMAS_CACHE_ = Object.freeze({
+      meta: ['key', 'value', 'updated_at'],
+      settings: ['key', 'value', 'updated_at'],
+      sources: ['source_id', 'name', 'type', 'description', 'status', 'created_at', 'updated_at'],
+      words: ['word_id', 'lemma', 'normalized_lemma', 'primary_meaning_zh', 'pos', 'source_id', 'priority', 'status', 'enrichment_status', 'created_at', 'updated_at', 'row_version'],
+      word_details: ['detail_id', 'word_id', 'detail_type', 'value', 'language', 'sort_order', 'provenance_type', 'provenance_ref', 'generator_version', 'confidence', 'validation_status', 'created_at', 'updated_at'],
+      cards: ['card_id', 'word_id', 'card_type', 'prompt_language', 'answer_language', 'status', 'introduced_at', 'created_at', 'updated_at'],
+      reviews: ['review_id', 'idempotency_key', 'session_id', 'card_id', 'word_id', 'review_type', 'rating', 'result', 'response_ms', 'answer', 'reviewed_at', 'previous_due', 'scheduled_days', 'elapsed_days', 'algorithm_version', 'created_at'],
+      memory_state: ['card_id', 'state', 'difficulty', 'stability', 'due_at', 'last_review_at', 'scheduled_days', 'elapsed_days', 'reps', 'lapses', 'learning_step', 'last_rating', 'algorithm_version', 'row_version', 'updated_at'],
+      daily_sessions: ['session_id', 'study_date', 'planned_minutes', 'status', 'overdue_count', 'due_count', 'weak_count', 'new_count', 'queue_json', 'started_at', 'completed_at', 'updated_at'],
+      import_jobs: ['import_id', 'source_id', 'filename', 'status', 'total_rows', 'inserted_rows', 'updated_rows', 'skipped_rows', 'error_rows', 'cursor_row', 'error_summary', 'created_at', 'completed_at', 'options_json'],
+      import_staging: ['import_id', 'row_number', 'payload_json', 'fingerprint', 'preview_action', 'status', 'result_action', 'error_message', 'word_id', 'processed_at', 'created_at'],
+      article_sources: ['article_id', 'title', 'url', 'source_type', 'language', 'content_hash', 'copyright_policy', 'status', 'created_at', 'processed_at'],
+      word_occurrences: ['occurrence_id', 'article_id', 'word_id', 'surface_form', 'sentence_excerpt', 'position_index', 'selection_reason', 'selected', 'created_at'],
+      enrichment_jobs: ['job_id', 'word_id', 'occurrence_id', 'task_type', 'provider', 'provider_version', 'prompt_version', 'status', 'confidence', 'output_json', 'error_message', 'created_at', 'completed_at', 'idempotency_key', 'attempt_count', 'next_retry_at', 'updated_at']
+    });
+  }
+  return SHEET_SCHEMAS_CACHE_;
+}
 
 /**
  * 建立或修補所有資料表，只新增缺少的表與首列，不刪除既有資料。
@@ -24,8 +37,9 @@ const SHEET_SCHEMAS = Object.freeze({
 function ensureSchema_(spreadsheet) {
   const now = new Date().toISOString();
   migrateSchemaHeaders_(spreadsheet);
-  Object.keys(SHEET_SCHEMAS).forEach(function(sheetName) {
-    const headers = SHEET_SCHEMAS[sheetName];
+  const schemas = getSheetSchemas_();
+  Object.keys(schemas).forEach(function(sheetName) {
+    const headers = schemas[sheetName];
     let sheet = spreadsheet.getSheetByName(sheetName);
     if (!sheet) sheet = spreadsheet.insertSheet(sheetName);
 

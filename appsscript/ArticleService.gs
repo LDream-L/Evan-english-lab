@@ -231,14 +231,14 @@ function queueArticleImport(input, selectedLemmas) {
     let stored = articles.find(function(item) { return String(item.content_hash) === hash; });
     const articleId = stored ? String(stored.article_id) : 'a_' + Utilities.getUuid().replace(/-/g, '');
     if (!stored) {
-      database.getSheetByName('article_sources').appendRow(objectRow_(SHEET_SCHEMAS.article_sources, {
+      database.getSheetByName('article_sources').appendRow(objectRow_(getSheetSchemas_().article_sources, {
         article_id: articleId, title: article.title, url: article.url, source_type: article.source_type, language: 'en',
         content_hash: hash, copyright_policy: 'excerpt_only', status: 'queued', created_at: now
       }));
     }
     const sources = readTable_('sources');
     if (!sources.some(function(source) { return String(source.source_id) === articleId; })) {
-      database.getSheetByName('sources').appendRow(objectRow_(SHEET_SCHEMAS.sources, {
+      database.getSheetByName('sources').appendRow(objectRow_(getSheetSchemas_().sources, {
         source_id: articleId, name: article.title, type: 'article', description: article.url || '貼上文章（僅保存必要摘錄）', status: 'active', created_at: now, updated_at: now
       }));
     }
@@ -253,18 +253,18 @@ function queueArticleImport(input, selectedLemmas) {
       if (occurrenceKeys.has(occurrenceKey)) return;
       const occurrenceId = 'o_' + Utilities.getUuid().replace(/-/g, '');
       const idempotencyKey = 'enrich:' + hash + ':' + lemma;
-      occurrenceRows.push(objectRow_(SHEET_SCHEMAS.word_occurrences, {
+      occurrenceRows.push(objectRow_(getSheetSchemas_().word_occurrences, {
         occurrence_id: occurrenceId, article_id: articleId, surface_form: candidate.surface_form, sentence_excerpt: candidate.sentence_excerpt,
         position_index: candidate.position_index, selection_reason: candidate.selection_reason, selected: true, created_at: now
       }));
-      if (!existingJobs.has(idempotencyKey)) jobRows.push(objectRow_(SHEET_SCHEMAS.enrichment_jobs, {
+      if (!existingJobs.has(idempotencyKey)) jobRows.push(objectRow_(getSheetSchemas_().enrichment_jobs, {
         job_id: 'ej_' + Utilities.getUuid().replace(/-/g, ''), occurrence_id: occurrenceId, task_type: 'lexical_enrichment',
         provider: APP_CONFIG.enrichmentProvider, provider_version: APP_CONFIG.enrichmentModel, prompt_version: 'm1a-v1', status: 'queued',
         created_at: now, idempotency_key: idempotencyKey, attempt_count: 0, updated_at: now
       }));
     });
-    if (occurrenceRows.length) database.getSheetByName('word_occurrences').getRange(database.getSheetByName('word_occurrences').getLastRow() + 1, 1, occurrenceRows.length, SHEET_SCHEMAS.word_occurrences.length).setValues(occurrenceRows);
-    if (jobRows.length) database.getSheetByName('enrichment_jobs').getRange(database.getSheetByName('enrichment_jobs').getLastRow() + 1, 1, jobRows.length, SHEET_SCHEMAS.enrichment_jobs.length).setValues(jobRows);
+    if (occurrenceRows.length) database.getSheetByName('word_occurrences').getRange(database.getSheetByName('word_occurrences').getLastRow() + 1, 1, occurrenceRows.length, getSheetSchemas_().word_occurrences.length).setValues(occurrenceRows);
+    if (jobRows.length) database.getSheetByName('enrichment_jobs').getRange(database.getSheetByName('enrichment_jobs').getLastRow() + 1, 1, jobRows.length, getSheetSchemas_().enrichment_jobs.length).setValues(jobRows);
     return { article_id: articleId, queued: jobRows.length, already_present: selected.length - occurrenceRows.length, provider: getEnrichmentProviderStatus() };
   } finally {
     lock.releaseLock();

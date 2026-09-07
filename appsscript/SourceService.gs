@@ -1,11 +1,11 @@
-const SOURCE_COLUMNS = Object.freeze(SHEET_SCHEMAS.sources.reduce(function(result, name, index) {
+const SOURCE_COLUMNS = Object.freeze(getSheetSchemas_().sources.reduce(function(result, name, index) {
   result[name] = index;
   return result;
 }, {}));
 
 function rowToSource_(row) {
   const result = {};
-  SHEET_SCHEMAS.sources.forEach(function(header, index) { result[header] = row[index]; });
+  getSheetSchemas_().sources.forEach(function(header, index) { result[header] = row[index]; });
   return result;
 }
 
@@ -60,7 +60,7 @@ function updateSource(sourceId, patch) {
   const id = cleanText_(sourceId);
   const sheet = getDatabase_().getSheetByName('sources');
   const count = Math.max(sheet.getLastRow() - 1, 0);
-  const rows = count ? sheet.getRange(2, 1, count, SHEET_SCHEMAS.sources.length).getValues() : [];
+  const rows = count ? sheet.getRange(2, 1, count, getSheetSchemas_().sources.length).getValues() : [];
   const index = rows.findIndex(function(row) { return String(row[SOURCE_COLUMNS.source_id]) === id; });
   if (index < 0) throw new Error('source_not_found:' + id);
   const current = rowToSource_(rows[index]);

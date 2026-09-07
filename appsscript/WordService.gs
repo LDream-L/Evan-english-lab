@@ -1,4 +1,4 @@
-const WORD_COLUMNS = Object.freeze(SHEET_SCHEMAS.words.reduce(function(result, name, index) {
+const WORD_COLUMNS = Object.freeze(getSheetSchemas_().words.reduce(function(result, name, index) {
   result[name] = index;
   return result;
 }, {}));
@@ -92,7 +92,7 @@ function loadWordTable_() {
   const sheet = getDatabase_().getSheetByName('words');
   if (!sheet) throw new Error('工作表不存在: words');
   const count = Math.max(sheet.getLastRow() - 1, 0);
-  const rows = count ? sheet.getRange(2, 1, count, SHEET_SCHEMAS.words.length).getValues() : [];
+  const rows = count ? sheet.getRange(2, 1, count, getSheetSchemas_().words.length).getValues() : [];
   const byId = new Map();
   const byKey = new Map();
   rows.forEach(function(row, index) {
@@ -126,7 +126,7 @@ function findWordRowById_(wordId) {
 
 function rowToWord_(row) {
   const result = {};
-  SHEET_SCHEMAS.words.forEach(function(header, index) { result[header] = row[index]; });
+  getSheetSchemas_().words.forEach(function(header, index) { result[header] = row[index]; });
   return result;
 }
 
@@ -215,7 +215,7 @@ function setWordArchived(wordId, archived, expectedRowVersion) {
 function getWord(wordId) {
   const rowNumber = findWordRowById_(wordId);
   const sheet = getDatabase_().getSheetByName('words');
-  const word = rowToWord_(sheet.getRange(rowNumber, 1, 1, SHEET_SCHEMAS.words.length).getValues()[0]);
+  const word = rowToWord_(sheet.getRange(rowNumber, 1, 1, getSheetSchemas_().words.length).getValues()[0]);
   word.details = readTable_('word_details').filter(function(item) { return String(item.word_id) === String(wordId); });
   return word;
 }
@@ -266,7 +266,7 @@ function saveWordDetail(input) {
   if (existingIndex >= 0) sheet.getRange(existingIndex + 2, 1, 1, row.length).setValues([row]);
   else sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
   const result = {};
-  SHEET_SCHEMAS.word_details.forEach(function(header, index) { result[header] = row[index]; });
+  getSheetSchemas_().word_details.forEach(function(header, index) { result[header] = row[index]; });
   return result;
 }
 
@@ -280,7 +280,7 @@ function deleteWordDetail(detailId) {
   const id = cleanText_(detailId);
   const sheet = getDatabase_().getSheetByName('word_details');
   const count = Math.max(sheet.getLastRow() - 1, 0);
-  const rows = count ? sheet.getRange(2, 1, count, SHEET_SCHEMAS.word_details.length).getValues() : [];
+  const rows = count ? sheet.getRange(2, 1, count, getSheetSchemas_().word_details.length).getValues() : [];
   const index = rows.findIndex(function(row) { return String(row[0]) === id; });
   if (index < 0) throw new Error('detail_not_found:' + id);
   sheet.deleteRow(index + 2);

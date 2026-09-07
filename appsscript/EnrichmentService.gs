@@ -1,4 +1,4 @@
-const ENRICHMENT_COLUMNS = Object.freeze(SHEET_SCHEMAS.enrichment_jobs.reduce(function(result, name, index) {
+const ENRICHMENT_COLUMNS = Object.freeze(getSheetSchemas_().enrichment_jobs.reduce(function(result, name, index) {
   result[name] = index;
   return result;
 }, {}));
@@ -15,7 +15,7 @@ function getEnrichmentProviderStatus() {
 
 function rowToEnrichmentJob_(row) {
   const result = {};
-  SHEET_SCHEMAS.enrichment_jobs.forEach(function(header, index) { result[header] = row[index]; });
+  getSheetSchemas_().enrichment_jobs.forEach(function(header, index) { result[header] = row[index]; });
   return result;
 }
 
@@ -31,7 +31,7 @@ function claimNextEnrichmentJob_() {
     const sheet = getDatabase_().getSheetByName('enrichment_jobs');
     const count = Math.max(sheet.getLastRow() - 1, 0);
     if (!count) return null;
-    const rows = sheet.getRange(2, 1, count, SHEET_SCHEMAS.enrichment_jobs.length).getValues();
+    const rows = sheet.getRange(2, 1, count, getSheetSchemas_().enrichment_jobs.length).getValues();
     const now = new Date();
     const staleBefore = now.getTime() - 10 * 60 * 1000;
     const index = rows.findIndex(function(row) {
@@ -60,7 +60,7 @@ function updateEnrichmentJob_(jobId, patch) {
   try {
     const sheet = getDatabase_().getSheetByName('enrichment_jobs');
     const count = Math.max(sheet.getLastRow() - 1, 0);
-    const rows = count ? sheet.getRange(2, 1, count, SHEET_SCHEMAS.enrichment_jobs.length).getValues() : [];
+    const rows = count ? sheet.getRange(2, 1, count, getSheetSchemas_().enrichment_jobs.length).getValues() : [];
     const index = rows.findIndex(function(row) { return String(row[ENRICHMENT_COLUMNS.job_id]) === String(jobId); });
     if (index < 0) throw new Error('enrichment_job_not_found:' + jobId);
     Object.keys(patch || {}).forEach(function(key) {
@@ -206,7 +206,7 @@ function completeEnrichmentJob_(job, occurrenceInfo, providerResult) {
     });
   }
   saveGeneratedDetails_(word.word_id, output, job, occurrenceInfo.record);
-  occurrenceInfo.sheet.getRange(occurrenceInfo.rowNumber, SHEET_SCHEMAS.word_occurrences.indexOf('word_id') + 1).setValue(word.word_id);
+  occurrenceInfo.sheet.getRange(occurrenceInfo.rowNumber, getSheetSchemas_().word_occurrences.indexOf('word_id') + 1).setValue(word.word_id);
   updateEnrichmentJob_(job.job_id, {
     word_id: word.word_id, provider_version: providerResult.model, status: 'completed', confidence: output.confidence,
     output_json: JSON.stringify(output), error_message: '', completed_at: new Date().toISOString(), next_retry_at: ''

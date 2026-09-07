@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 test('schema includes separate word, card, review and memory tables', () => {
   const schema = fs.readFileSync(path.join(__dirname, '..', 'appsscript', 'Schema.gs'), 'utf8');
@@ -56,4 +57,22 @@ test('M1 front end renders user data without innerHTML', () => {
   for (const method of ['createWord', 'updateWord', 'setWordArchived', 'previewWordImport', 'startWordImport', 'continueWordImport']) {
     assert.match(client, new RegExp("['\"]" + method + "['\"]"));
   }
+});
+
+test('service files can initialize before Schema.gs without a global load error', () => {
+  const appDir = path.join(__dirname, '..', 'appsscript');
+  const loadOrder = [
+    'WordService.gs',
+    'SourceService.gs',
+    'ImportService.gs',
+    'EnrichmentService.gs',
+    'ArticleService.gs',
+    'Code.gs',
+    'Schema.gs'
+  ];
+  const source = loadOrder.map((name) => fs.readFileSync(path.join(appDir, name), 'utf8')).join('\n');
+  const context = vm.createContext({ URL, console });
+  vm.runInContext(source, context);
+  assert.equal(vm.runInContext("getSheetSchemas_().words[0]", context), 'word_id');
+  assert.equal(vm.runInContext("getSheetSchemas_().enrichment_jobs.at(-1)", context), 'updated_at');
 });

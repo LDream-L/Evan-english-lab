@@ -286,6 +286,7 @@ function continueWordImport(importId, requestedBatchSize) {
     const hasPending = stagingRows.some(function(row) {
       return String(row[IMPORT_STAGING_COLUMNS.import_id]) === String(importId) && row[IMPORT_STAGING_COLUMNS.status] === 'pending';
     });
+    if (!hasPending) cursor = Number(job.total_rows) || cursor;
     jobRef.row[IMPORT_JOB_COLUMNS.status] = hasPending ? 'running' : 'completed';
     jobRef.row[IMPORT_JOB_COLUMNS.inserted_rows] = inserted;
     jobRef.row[IMPORT_JOB_COLUMNS.updated_rows] = updated;

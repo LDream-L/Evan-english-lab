@@ -47,3 +47,5 @@ evan-toeic-lab/
 M1 的欄位格式、去重規則、錯誤分類與續跑方式見 [docs/m1-word-library.md](docs/m1-word-library.md)。
 
 M1A 的文章保存邊界、候選規則、補全信心門檻與 API 設定見 [docs/m1a-article-import.md](docs/m1a-article-import.md)。
+
+刷刷庫與 Parroto 的功能評估、採用範圍及不複製邊界見 [docs/product-reference-review.md](docs/product-reference-review.md)。

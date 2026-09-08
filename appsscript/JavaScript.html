@@ -1,5 +1,6 @@
 <script>
-  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv', articleCandidates: [] };
+  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv', articleCandidates: [], ridingPlaylist: null };
+  const ridingState = { playing: false, paused: false, index: 0, token: 0, wakeLock: null };
 
   function callServer(name, args) {
     return new Promise(function(resolve, reject) {
@@ -232,6 +233,176 @@
     finally { await loadEnrichmentStatus(); }
   }
 
+  function ridingOptions() {
+    return {
+      target_minutes: Number(document.getElementById('riding-minutes').value),
+      speech_rate: Number(document.getElementById('riding-rate').value),
+      max_passes: Number(document.getElementById('riding-passes').value)
+    };
+  }
+
+  function ridingSummary(playlist) {
+    const duration = playlist.estimated_minutes + ' 分鐘';
+    const ending = playlist.ended_early ? '；現有內容播完後會提前結束' : '；已依時間上限截斷';
+    return '可用 ' + playlist.available_word_count + ' 字，選入 ' + playlist.unique_word_count
+      + ' 字，共 ' + playlist.exposure_count + ' 次播放，預估 ' + duration + ending + '。';
+  }
+
+  async function prepareRidingPlaylist() {
+    stopRidingPlayback(false);
+    const button = document.getElementById('prepare-riding');
+    button.disabled = true;
+    setMessage('riding-message', '正在依單字量與時間上限建立清單…');
+    try {
+      const playlist = await callServer('getRidingAudioPlaylist', [ridingOptions()]);
+      uiState.ridingPlaylist = playlist;
+      document.getElementById('riding-player').classList.remove('hidden');
+      document.getElementById('riding-status').textContent = playlist.items.length ? '清單已準備' : '沒有可播放單字';
+      document.getElementById('start-riding').disabled = !playlist.items.length;
+      document.getElementById('riding-current').textContent = playlist.items.length ? '停妥後即可開始' : '請先新增啟用中的單字';
+      document.getElementById('riding-progress').textContent = ridingSummary(playlist);
+      setMessage('riding-message', playlist.items.length
+        ? '清單已載入。請在車輛停妥時調整音量並按「停妥後開始播放」。'
+        : '目前沒有可播放的啟用單字。', !playlist.items.length);
+    } catch (error) {
+      uiState.ridingPlaylist = null;
+      document.getElementById('riding-status').textContent = '準備失敗';
+      setMessage('riding-message', '清單建立失敗：' + errorText(error), true);
+    } finally { button.disabled = false; }
+  }
+
+  async function requestRidingWakeLock() {
+    if (!('wakeLock' in navigator)) return false;
+    try {
+      ridingState.wakeLock = await navigator.wakeLock.request('screen');
+      ridingState.wakeLock.addEventListener('release', function() { ridingState.wakeLock = null; });
+      return true;
+    } catch (error) { return false; }
+  }
+
+  function ridingDelay(milliseconds, token) {
+    return new Promise(function(resolve) {
+      let remaining = milliseconds;
+      const tick = function() {
+        if (token !== ridingState.token || !ridingState.playing) { resolve(); return; }
+        if (!ridingState.paused) remaining -= 100;
+        if (remaining <= 0) { resolve(); return; }
+        window.setTimeout(tick, 100);
+      };
+      tick();
+    });
+  }
+
+  function speakRiding(text, language, rate, token) {
+    if (!text || token !== ridingState.token || !ridingState.playing) return Promise.resolve();
+    return new Promise(function(resolve, reject) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language;
+      utterance.rate = rate;
+      utterance.onend = resolve;
+      utterance.onerror = function(event) {
+        if (event.error === 'canceled' || event.error === 'interrupted') resolve();
+        else reject(new Error('語音播放失敗：' + event.error));
+      };
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
+  async function playRidingItem(item, rate, token) {
+    await speakRiding(item.lemma, 'en-US', rate, token);
+    await ridingDelay(450, token);
+    await speakRiding(item.lemma, 'en-US', rate, token);
+    await ridingDelay(1200, token);
+    await speakRiding(item.primary_meaning_zh, 'zh-TW', rate, token);
+    await ridingDelay(1000, token);
+    if (item.context) {
+      await speakRiding(item.context, 'en-US', rate, token);
+      await ridingDelay(2500, token);
+    }
+    await speakRiding(item.lemma, 'en-US', rate, token);
+    await ridingDelay(800, token);
+  }
+
+  async function startRidingPlayback() {
+    const playlist = uiState.ridingPlaylist;
+    if (!playlist || !playlist.items.length || !('speechSynthesis' in window)) {
+      setMessage('riding-message', '這個瀏覽器沒有可用的語音播放功能，或清單尚未準備。', true);
+      return;
+    }
+    if (ridingState.paused) {
+      ridingState.paused = false;
+      window.speechSynthesis.resume();
+      document.getElementById('pause-riding').textContent = '暫停';
+      document.getElementById('riding-status').textContent = '播放中';
+      return;
+    }
+    ridingState.playing = true;
+    ridingState.paused = false;
+    ridingState.index = 0;
+    ridingState.token += 1;
+    const token = ridingState.token;
+    const wakeLockPromise = requestRidingWakeLock();
+    document.getElementById('start-riding').disabled = true;
+    document.getElementById('pause-riding').disabled = false;
+    document.getElementById('stop-riding').disabled = false;
+    document.getElementById('riding-status').textContent = '播放中';
+    setMessage('riding-message', '播放中；正在確認畫面保持功能。騎乘途中請勿操作。');
+    wakeLockPromise.then(function(active) {
+      if (!ridingState.playing || token !== ridingState.token) return;
+      setMessage('riding-message', active
+        ? '播放中；畫面保持啟用。騎乘途中請勿操作。'
+        : '播放中；瀏覽器無法保證畫面持續啟用。騎乘途中請勿操作。');
+    });
+    try {
+      for (let index = 0; index < playlist.items.length; index += 1) {
+        if (!ridingState.playing || token !== ridingState.token) break;
+        ridingState.index = index;
+        const item = playlist.items[index];
+        document.getElementById('riding-current').textContent = item.lemma;
+        document.getElementById('riding-progress').textContent = '第 ' + (index + 1) + '／' + playlist.items.length
+          + ' 次 · 第 ' + item.pass_number + ' 輪 · 最多 ' + playlist.target_minutes + ' 分鐘';
+        await playRidingItem(item, playlist.options.speech_rate, token);
+      }
+      if (ridingState.playing && token === ridingState.token) {
+        stopRidingPlayback(false);
+        document.getElementById('riding-status').textContent = '播放完成';
+        document.getElementById('riding-current').textContent = '本次清單已完成';
+        document.getElementById('riding-progress').textContent = ridingSummary(playlist);
+        setMessage('riding-message', '播放完成。停車後可回到一般學習模式進行真正的回想與作答。');
+      }
+    } catch (error) {
+      stopRidingPlayback(false);
+      document.getElementById('riding-status').textContent = '播放中斷';
+      setMessage('riding-message', errorText(error), true);
+    }
+  }
+
+  function toggleRidingPause() {
+    if (!ridingState.playing) return;
+    ridingState.paused = !ridingState.paused;
+    if (ridingState.paused) window.speechSynthesis.pause();
+    else window.speechSynthesis.resume();
+    document.getElementById('pause-riding').textContent = ridingState.paused ? '繼續' : '暫停';
+    document.getElementById('riding-status').textContent = ridingState.paused ? '已暫停' : '播放中';
+  }
+
+  function stopRidingPlayback(showMessage) {
+    ridingState.playing = false;
+    ridingState.paused = false;
+    ridingState.token += 1;
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (ridingState.wakeLock) ridingState.wakeLock.release().catch(function() {});
+    ridingState.wakeLock = null;
+    document.getElementById('start-riding').disabled = !(uiState.ridingPlaylist && uiState.ridingPlaylist.items.length);
+    document.getElementById('pause-riding').disabled = true;
+    document.getElementById('pause-riding').textContent = '暫停';
+    document.getElementById('stop-riding').disabled = true;
+    if (showMessage !== false) {
+      document.getElementById('riding-status').textContent = '已結束';
+      setMessage('riding-message', '播放已結束。');
+    }
+  }
+
   /**
    * 解析支援引號、跳脫雙引號與換行欄位的 CSV／TSV。
    * 時間複雜度：O(k)，k 為檔案字元數。
@@ -314,6 +485,10 @@
   }
 
   function bindEvents() {
+    document.getElementById('prepare-riding').addEventListener('click', prepareRidingPlaylist);
+    document.getElementById('start-riding').addEventListener('click', startRidingPlayback);
+    document.getElementById('pause-riding').addEventListener('click', toggleRidingPause);
+    document.getElementById('stop-riding').addEventListener('click', function() { stopRidingPlayback(true); });
     document.getElementById('search-words').addEventListener('click', loadWords);
     document.getElementById('word-search').addEventListener('keydown', function(event) { if (event.key === 'Enter') loadWords(); });
     document.getElementById('word-form').addEventListener('submit', saveWord);
@@ -329,6 +504,10 @@
     document.getElementById('import-text').addEventListener('input', function() { document.getElementById('start-import').disabled = true; });
     document.getElementById('preview-import').addEventListener('click', previewImport);
     document.getElementById('start-import').addEventListener('click', startImport);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible' && ridingState.playing && !ridingState.wakeLock) requestRidingWakeLock();
+    });
+    window.addEventListener('pagehide', function() { stopRidingPlayback(false); });
   }
 
   document.addEventListener('DOMContentLoaded', initializeApp);

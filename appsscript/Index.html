@@ -23,6 +23,31 @@
         <button type="button" disabled>開始今日學習（M2 開放）</button>
       </section>
 
+      <section class="card riding-card">
+        <div class="section-heading">
+          <div><p class="eyebrow">M2R Preview</p><h2>騎乘音訊模式</h2></div>
+          <span id="riding-status" class="badge">尚未準備</span>
+        </div>
+        <p class="muted">出發前完成設定並啟動；騎乘中只聽、不看、不操作。此模式只記錄播放，不視為答對或正式複習。</p>
+        <div class="form-grid riding-options">
+          <label>最多播放時間（分鐘）<input id="riding-minutes" type="number" min="5" max="60" step="1" value="35"></label>
+          <label>語速<select id="riding-rate"><option value="0.8">0.8×</option><option value="0.9" selected>0.9×</option><option value="1">1.0×</option><option value="1.1">1.1×</option></select></label>
+          <label>單字不足時最多播放輪數<select id="riding-passes"><option value="1">1 輪</option><option value="2">2 輪</option><option value="3" selected>3 輪</option></select></label>
+          <button id="prepare-riding" type="button">準備音訊清單</button>
+        </div>
+        <p id="riding-message" class="message" aria-live="polite">35 分鐘是上限；系統會依現有單字與重播上限自動縮短，不會硬塞或無限重播。</p>
+        <div id="riding-player" class="riding-player hidden" aria-live="polite">
+          <p class="riding-label">目前播放</p>
+          <strong id="riding-current">準備完成</strong>
+          <p id="riding-progress" class="muted">—</p>
+          <div class="button-row riding-controls">
+            <button id="start-riding" type="button" disabled>停妥後開始播放</button>
+            <button id="pause-riding" type="button" class="secondary" disabled>暫停</button>
+            <button id="stop-riding" type="button" class="secondary" disabled>結束</button>
+          </div>
+        </div>
+      </section>
+
       <section class="card">
         <div class="section-heading">
           <div><p class="eyebrow">M1</p><h2>單字庫</h2></div><span id="word-count" class="muted">—</span>

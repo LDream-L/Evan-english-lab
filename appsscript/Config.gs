@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
   appName: 'Evan TOEIC Lab',
-  appVersion: 'v0.2.1-m1a',
+  appVersion: 'v0.2.2-m2r-preview',
   schemaVersion: 4,
   spreadsheetProperty: 'SPREADSHEET_ID',
   importBatchSize: 200,

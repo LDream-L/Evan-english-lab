@@ -6,8 +6,9 @@
 |---|---|---:|---|
 | M0 專案骨架 | 已完成 | 100% | 無 |
 | M1 單字資料庫 | 已完成 | 100% | 無 |
-| M1A 文章擷取／自動補全 | 實作中 | 75% | 待 schema v4 部署與 Gemini API 金鑰 |
-| M2 快速預習 | 未開始 | 0% | 等 M1 |
+| M1A 文章擷取／自動補全 | 實作中 | 90% | Gemini API 金鑰與端到端補全驗收 |
+| M2R 騎乘音訊 Preview | 已部署待實機驗收 | 90% | 需加入啟用單字並以手機實測語音 |
+| M2 快速預習 | 未開始 | 0% | 等 M1A 驗收 |
 | M3 正式複習 | 未開始 | 0% | 等 M2 |
 | M4 自適應排程 | 未開始 | 0% | 等 M3 |
 | M5 Dashboard | 未開始 | 0% | 等 M4 |
@@ -27,6 +28,9 @@
 - M1A 本地測試加入網址安全、HTML 清理、候選排序、已收錄／已掌握排除與 UI 安全檢查。
 - 新增 GitHub Actions：每次 `main` push 或 pull request 自動執行 Node 測試與所有 `.gs` 語法檢查；workflow 只有 repository contents 唯讀權限。
 - 建立 GitHub → Apps Script production workflow：手動觸發、測試、`clasp push`、建立不可變 version、更新既有 deployment，並在 runner 結束時清除暫存憑證。
+- 修正 Apps Script 跨檔案頂層載入順序造成的 `SHEET_SCHEMAS is not defined`，並新增反向載入測試。
+- 正式 Google Sheet 已完成 schema v4 遷移；線上 `setupProject()`、`healthCheck()` 均執行完成且無錯誤。
+- M1A 已建立第 4 版正式部署 `v0.2.1-m1a`，文章預覽可正常辨識候選字且不會在預覽階段寫入單字庫。
 
 - 實作單字新增、讀取、更新、封存與復原，更新使用 `row_version` 防止舊頁面覆蓋。
 - 實作來源新增、更新與封存；單字保存不可變 `source_id` 關聯。
@@ -57,11 +61,14 @@
 - 完成 M2R Preview：依可用單字量、語速、內容長度與最多三輪重播動態產生 5～60 分鐘清單；支援裝置端英／中語音、暫停、結束與 Screen Wake Lock，單字不足時安全提前結束。
 - 依騎乘雙作業與詞彙學習研究調整腳本為低負荷「英文兩次→中文→短搭配／例句→英文」，高負荷提取與正式評分留到停車後。
 - 新增 3 項騎乘音訊測試；全套本地測試目前 24/24 通過，所有 `.gs` 語法檢查通過。
+- Apps Script 五個 M2R 相關檔案已與 GitHub `main` 逐檔通過 Git blob SHA 比對，並再次通過線上 `healthCheck()`。
+- M2R 已建立第 5 版正式部署 `v0.2.2-m2r-preview`，沿用原私人 Web App 網址與「只有我自己」權限。
+- 正式網站 smoke test 通過：版本、schema、騎乘音訊介面與後端播放清單呼叫均正常；因目前啟用單字為 0，正確進入空清單安全狀態。
 - 新增產品參考文件，明列刷刷庫／Parroto 的可借鑑功能、著作權邊界、語音隱私與延後項目。
 
 ## 下一批
 
+- 新增或匯入啟用單字，以手機完成 M2R 英／中語音、暫停、續播、螢幕鎖定與提前結束的實機驗收。
+- 以獨立的 Evan English Lab Google Cloud 專案安全建立 Gemini API 金鑰，保存到 Apps Script Script Properties，並執行一篇測試文章的端到端補全；免費層僅傳送目標字與來源句，不傳送帳密。
 - 完成 Apps Script API 與三個 GitHub Actions secrets 的一次性設定，執行首次 production workflow。
-- 修正 Apps Script 執行時的全域載入錯誤，再執行 schema v4 遷移與線上健康檢查。
-- 以安全方式建立並保存 Gemini API 金鑰，執行一篇測試文章的端到端補全。
-- 完成後進入 M2 快速預習，先交付來源短句、句中選字、瀏覽器發音與錯誤回流的最小閉環，並同步交付 M2R-A 的 35 分鐘騎乘音訊 MVP。
+- 進入 M2 快速預習，先交付來源短句、句中選字、瀏覽器發音與錯誤回流的最小閉環。

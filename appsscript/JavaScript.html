@@ -1,5 +1,5 @@
 <script>
-  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv', articleCandidates: [], ridingPlaylist: null };
+  const uiState = { words: [], sources: [], importRows: [], importFilename: 'manual-import.csv', articleCandidates: [], ridingPlaylist: null, preview: null, previewBusy: false };
   const ridingState = { playing: false, paused: false, index: 0, token: 0, wakeLock: null, activeUtterance: null, speechStarted: false };
 
   function callServer(name, args) {
@@ -25,7 +25,7 @@
    */
   async function initializeApp() {
     bindEvents();
-    await Promise.all([loadDashboard(), loadSources(), loadWords(), loadEnrichmentStatus()]);
+    await Promise.all([loadDashboard(), loadSources(), loadWords(), loadEnrichmentStatus(), loadPreviewSession()]);
     await resumeImportIfNeeded();
   }
 
@@ -77,6 +77,96 @@
       if (!result.items.length) { list.textContent = '目前沒有符合條件的單字。'; return; }
       result.items.forEach(function(word) { list.appendChild(createWordElement(word)); });
     } catch (error) { list.textContent = '單字載入失敗：' + errorText(error); }
+  }
+
+  function renderPreview(snapshot) {
+    uiState.preview = snapshot;
+    const panel = document.getElementById('preview-panel');
+    const summary = document.getElementById('preview-summary');
+    const start = document.getElementById('start-preview');
+    const status = document.getElementById('preview-status');
+    start.disabled = uiState.previewBusy;
+    if (!snapshot) {
+      panel.classList.add('hidden'); summary.classList.add('hidden');
+      start.textContent = '開始 10 字預習'; status.textContent = '可開始'; return;
+    }
+    if (snapshot.status === 'preview_completed') {
+      panel.classList.add('hidden'); summary.classList.remove('hidden');
+      status.textContent = '本組完成'; start.textContent = '開始下一組 10 字';
+      summary.textContent = '本組 ' + snapshot.total + ' 字：已經會 ' + snapshot.counts.know
+        + '／有印象 ' + snapshot.counts.familiar + '／不會 ' + snapshot.counts.new
+        + '。這是預習自評，不會算入正式複習成績。';
+      return;
+    }
+    start.textContent = '繼續目前預習'; status.textContent = '進行中';
+    summary.classList.add('hidden'); panel.classList.remove('hidden');
+    const word = snapshot.current;
+    document.getElementById('preview-progress').textContent = '第 ' + (snapshot.cursor + 1) + '／' + snapshot.total + ' 字';
+    document.getElementById('preview-answer').classList.add('hidden');
+    document.getElementById('reveal-preview').classList.remove('hidden');
+    document.getElementById('preview-word').textContent = word && !word.unavailable ? word.lemma : '單字已停用';
+    document.getElementById('preview-pos').textContent = word && !word.unavailable ? word.pos : '';
+    if (!word || word.unavailable) {
+      document.getElementById('reveal-preview').classList.add('hidden');
+      document.getElementById('preview-answer').classList.remove('hidden');
+      setMessage('preview-message', '這筆單字已停用，請選「不會」略過；不會計入正式成績。');
+    }
+    document.getElementById('preview-meaning').textContent = word && word.meaning || '';
+    document.getElementById('preview-collocation').textContent = word && word.collocation ? '常見搭配：' + word.collocation : '';
+    document.getElementById('preview-example').textContent = word && word.example ? '例句：' + word.example : '';
+    document.getElementById('preview-sentence').textContent = word && word.sentence_excerpt ? '文章短句：' + word.sentence_excerpt : '';
+    document.getElementById('preview-source').textContent = word && (word.article_title || word.source_name)
+      ? '來源：' + (word.article_title || word.source_name) : '';
+    const link = document.getElementById('preview-article-link');
+    link.classList.toggle('hidden', !(word && word.article_url));
+    if (word && word.article_url) link.href = word.article_url;
+    else link.removeAttribute('href');
+  }
+
+  async function loadPreviewSession() {
+    try {
+      renderPreview(await callServer('getLatestPreviewSession'));
+    } catch (error) {
+      document.getElementById('start-preview').disabled = false;
+      setMessage('preview-message', '讀取預習進度失敗：' + errorText(error), true);
+    }
+  }
+
+  async function startPreview() {
+    if (uiState.previewBusy) return;
+    if (uiState.preview && uiState.preview.status === 'preview_active') {
+      document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    uiState.previewBusy = true;
+    document.getElementById('start-preview').disabled = true;
+    setMessage('preview-message', '正在準備預習…');
+    try {
+      renderPreview(await callServer('startPreviewSession', [10]));
+      setMessage('preview-message', '先想想意思，再按「看意思與例句」。');
+    } catch (error) { setMessage('preview-message', '預習無法開始：' + errorText(error), true); }
+    finally { uiState.previewBusy = false; document.getElementById('start-preview').disabled = false; }
+  }
+
+  function revealPreview() {
+    document.getElementById('reveal-preview').classList.add('hidden');
+    document.getElementById('preview-answer').classList.remove('hidden');
+  }
+
+  async function choosePreview(event) {
+    const snapshot = uiState.preview;
+    if (uiState.previewBusy || !snapshot || !snapshot.current) return;
+    uiState.previewBusy = true;
+    document.querySelectorAll('[data-preview-choice]').forEach(function(button) { button.disabled = true; });
+    try {
+      renderPreview(await callServer('submitPreviewChoice', [snapshot.session_id, snapshot.current.word_id, event.currentTarget.dataset.previewChoice]));
+      setMessage('preview-message', uiState.preview.status === 'preview_completed'
+        ? '本組已完成；可開始下一組。' : '已記錄，請繼續下一個單字。');
+    } catch (error) { setMessage('preview-message', '預習進度儲存失敗：' + errorText(error), true); }
+    finally {
+      uiState.previewBusy = false;
+      document.querySelectorAll('[data-preview-choice]').forEach(function(button) { button.disabled = false; });
+    }
   }
 
   function createWordElement(word) {
@@ -593,6 +683,9 @@
   }
 
   function bindEvents() {
+    document.getElementById('start-preview').addEventListener('click', startPreview);
+    document.getElementById('reveal-preview').addEventListener('click', revealPreview);
+    document.querySelectorAll('[data-preview-choice]').forEach(function(button) { button.addEventListener('click', choosePreview); });
     document.getElementById('prepare-riding').addEventListener('click', prepareRidingPlaylist);
     document.getElementById('test-riding-tone').addEventListener('click', testRidingTone);
     document.getElementById('test-riding-audio').addEventListener('click', testRidingAudio);

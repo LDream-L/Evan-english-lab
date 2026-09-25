@@ -45,6 +45,11 @@
   .candidate-score { min-width: 54px; color: #315b80; font-size: 12px; font-weight: 800; text-align: right; }
   .button-row { justify-content: flex-start; margin-top: 14px; }
   .riding-card { border-color: #b8d0df; background: linear-gradient(145deg, #ffffff, #f2f8fb); }
+  .preview-card { border-color: #b7d8c8; background: linear-gradient(145deg, #ffffff, #f4faf6); }
+  .preview-panel { margin-top: 16px; padding: 20px; border: 1px solid #d9e8de; border-radius: 12px; background: #fff; }
+  .preview-word { display: block; margin: 12px 0 4px; font-size: clamp(28px, 7vw, 42px); }
+  .preview-meaning { font-size: 20px; font-weight: 800; }
+  .preview-choices button { min-width: 105px; }
   .riding-options { margin-top: 18px; }
   .riding-player { margin-top: 18px; padding: 20px; border-radius: 14px; background: #102d43; color: white; text-align: center; }
   .riding-player .muted { color: #c7d8e4; }
@@ -64,4 +69,5 @@
     .candidate-score { text-align: left; }
   }
   @media (max-width: 430px) { .metrics, .form-grid { grid-template-columns: 1fr; } .hero { align-items: start; } }
+  @media (max-width: 430px) { .preview-choices { flex-direction: column; align-items: stretch; } }
 </style>

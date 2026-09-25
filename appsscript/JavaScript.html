@@ -351,6 +351,40 @@
     });
   }
 
+  async function testRidingTone() {
+    const button = document.getElementById('test-riding-tone');
+    if (ridingState.playing) return;
+    button.disabled = true;
+    let context;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('此瀏覽器不支援提示音測試。');
+      context = new AudioContextClass();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 660;
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.15, context.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.55);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      const ended = new Promise(function(resolve) { oscillator.onended = resolve; });
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.56);
+      await context.resume();
+      await ended;
+      document.getElementById('riding-status').textContent = '提示音已送出';
+      setMessage('riding-message', '有聽見短提示音嗎？若沒有，請先檢查手機的媒體音量、靜音模式與聲音輸出位置；若有，再按「停妥後試聽」。');
+    } catch (error) {
+      document.getElementById('riding-status').textContent = '提示音測試失敗';
+      setMessage('riding-message', errorText(error), true);
+    } finally {
+      if (context) context.close().catch(function() {});
+      button.disabled = false;
+    }
+  }
+
   async function testRidingAudio() {
     const button = document.getElementById('test-riding-audio');
     if (ridingState.playing) return;
@@ -361,7 +395,6 @@
       if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
         throw new Error('這個瀏覽器不支援文字轉語音；請改用支援朗讀的瀏覽器。');
       }
-      window.speechSynthesis.cancel();
       await speakRiding('Hello. This is an audio test.', 'en-US', 1, ridingState.token, true, function() {
         document.getElementById('riding-status').textContent = '試聽播放中';
         setMessage('riding-message', '語音引擎已開始。若聽不到，請檢查媒體音量與藍牙輸出。');
@@ -561,6 +594,7 @@
 
   function bindEvents() {
     document.getElementById('prepare-riding').addEventListener('click', prepareRidingPlaylist);
+    document.getElementById('test-riding-tone').addEventListener('click', testRidingTone);
     document.getElementById('test-riding-audio').addEventListener('click', testRidingAudio);
     document.getElementById('start-riding').addEventListener('click', startRidingPlayback);
     document.getElementById('pause-riding').addEventListener('click', toggleRidingPause);

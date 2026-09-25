@@ -33,6 +33,7 @@
           <label>最多播放時間（分鐘）<input id="riding-minutes" type="number" min="5" max="60" step="1" value="35"></label>
           <label>語速<select id="riding-rate"><option value="0.8">0.8×</option><option value="0.9" selected>0.9×</option><option value="1">1.0×</option><option value="1.1">1.1×</option></select></label>
           <label>單字不足時最多播放輪數<select id="riding-passes"><option value="1">1 輪</option><option value="2">2 輪</option><option value="3" selected>3 輪</option></select></label>
+          <button id="test-riding-audio" type="button" class="secondary">停妥後試聽</button>
           <button id="prepare-riding" type="button">準備音訊清單</button>
         </div>
         <p id="riding-message" class="message" aria-live="polite">35 分鐘是上限；系統會依現有單字與重播上限自動縮短，不會硬塞或無限重播。</p>
